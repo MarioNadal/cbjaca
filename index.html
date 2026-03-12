@@ -1733,6 +1733,116 @@ function delTeam(name){
     }
   );
 }
+
+function chgDate(d){const dt=new Date(S.date+"T12:00:00");dt.setDate(dt.getDate()+d);S.date=dt.toISOString().split("T")[0];render();}
+
+function cycleAtt(pid){
+  const k=sk(S.teamId,S.date);
+  const sess={...S.sessions[k]||{}};
+  const cur=sess[pid]||"present";
+  const next=ASTS[(ASTS.indexOf(cur)+1)%ASTS.length];
+  sess[pid]=next;
+  if(next!=="excused"){delete sess[pid+"_jr"];delete sess[pid+"_jn"];}
+  S.sessions[k]=sess;save();render();
+}
+
+function setAll(st){
+  const k=sk(S.teamId,S.date);
+  const sess={...S.sessions[k]||{}};
+  pl(S.teamId).forEach(p=>{
+    sess[p.id]=st;
+    if(st!=="excused"){delete sess[p.id+"_jr"];delete sess[p.id+"_jn"];}
+  });
+  S.sessions[k]=sess;save();render();
+}
+
+function setTeamScore(v){
+  const k=sk(S.teamId,S.date);
+  const sess={...S.sessions[k]||{}};
+  sess._teamScore=(sess._teamScore===v?0:v);
+  S.sessions[k]=sess;save();render();
+}
+
+function setPlayerScore(pid,v){
+  const k=sk(S.teamId,S.date);
+  const sess={...S.sessions[k]||{}};
+  sess[pid+"_score"]=(sess[pid+"_score"]===v?0:v);
+  S.sessions[k]=sess;save();render();
+}
+
+function _flushSess(){
+  const k=sk(S.teamId,S.date);
+  const sess={...S.sessions[k]||{}};
+  pl(S.teamId).forEach(p=>{if(!sess[p.id])sess[p.id]="present";});
+  const notes=document.getElementById("att-notes")?.value||"";
+  sess._notes=notes;
+  const exEl=document.getElementById("att-exercises");
+  if(exEl)sess._exercises=exEl.value.trim();
+  S.sessions[k]=sess;save();return sess;
+}
+
+function lsTab(which){
+  const el=document.getElementById("ls-stats-table");if(!el)return;
+  document.getElementById("ls-tab-our")?.classList.toggle("on",which==="our");
+  document.getElementById("ls-tab-rival")?.classList.toggle("on",which==="rival");
+  el.dataset.tab=which;
+  el.querySelectorAll("[data-team]").forEach(row=>{
+    row.style.display=(row.dataset.team===which||row.dataset.team==="header")?"":"none";
+  });
+}
+
+function setTLResult(idx,result){
+  const el=document.getElementById("m-tlshoot");if(!el)return;
+  if(!el._results)el._results=[];
+  el._results[idx]=result;
+  // Re-render the shot buttons
+  const container=document.getElementById("tl-shots-container");
+  if(!container)return;
+  const total=el._total||0;
+  let html="";
+  for(let i=0;i<total;i++){
+    const v=el._results[i];
+    if(v===null||v===undefined){
+      html+=`<div style="display:flex;gap:8px;margin-bottom:8px">
+        <div style="font-weight:700;font-size:14px;color:var(--td);min-width:50px">TL ${i+1}:</div>
+        <button onclick="setTLResult(${i},true)" style="flex:1;padding:16px 0;border-radius:10px;border:1px solid rgba(34,197,94,.4);background:rgba(34,197,94,.1);color:#22c55e;font-weight:900;font-size:18px;cursor:pointer">✓ Dentro</button>
+        <button onclick="setTLResult(${i},false)" style="flex:1;padding:16px 0;border-radius:10px;border:1px solid rgba(239,68,68,.4);background:rgba(239,68,68,.1);color:#ef4444;font-weight:900;font-size:18px;cursor:pointer">✗ Fuera</button>
+      </div>`;
+    } else {
+      html+=`<div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
+        <div style="font-weight:700;font-size:14px;color:var(--td);min-width:50px">TL ${i+1}:</div>
+        <div style="flex:1;padding:10px;border-radius:10px;background:${v?"rgba(34,197,94,.2)":"rgba(239,68,68,.2)"};color:${v?"#22c55e":"#ef4444"};font-weight:900;text-align:center">${v?"✓ Dentro":"✗ Fuera"}</div>
+        <button onclick="setTLResult(${i},null)" style="padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--s2);color:var(--td);cursor:pointer;font-size:12px">↩</button>
+      </div>`;
+    }
+  }
+  container.innerHTML=html;
+  // Check if all shots decided
+  const allDone=el._results.filter(r=>r!==null&&r!==undefined).length===total;
+  const saveBtn=document.getElementById("tl-save-btn");
+  if(saveBtn)saveBtn.disabled=!allDone;
+}
+
+function setTeamTLCount(n){
+  const el=document.getElementById("m-teamtl");if(!el)return;
+  el._count=n;
+  document.querySelectorAll("[id^='ttl-n']").forEach(btn=>{
+    btn.style.background=parseInt(btn.id.replace("ttl-n",""))===n?"rgba(249,115,22,.3)":"var(--s2)";
+    btn.style.borderColor=parseInt(btn.id.replace("ttl-n",""))===n?"var(--orange)":"var(--border)";
+  });
+  const makesRow=document.getElementById("ttl-makes-row");
+  if(makesRow)makesRow.style.display=n>0?"block":"none";
+}
+
+function setTeamTLMakes(n){
+  const el=document.getElementById("m-teamtl");if(!el)return;
+  el._makes=n;
+  document.querySelectorAll("[id^='ttl-m']").forEach(btn=>{
+    btn.style.background=parseInt(btn.id.replace("ttl-m",""))===n?"rgba(34,197,94,.3)":"var(--s2)";
+    btn.style.borderColor=parseInt(btn.id.replace("ttl-m",""))===n?"#22c55e":"var(--border)";
+  });
+}
+
 function saveAtt(){_flushSess();const btn=document.getElementById("btn-save-att");if(btn){btn.textContent="✅ Guardado";btn.style.background="#0d3320";}toast("✅ Guardado");}
 function saveAttAndShare(){_flushSess();S.screen="share";render();}
 async function handlePhoto(input){
