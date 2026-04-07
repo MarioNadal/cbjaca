@@ -1,4 +1,4 @@
-const CACHE = "cbj-v3";
+const CACHE = "driveline-v1";
 const URLS_TO_CACHE = [
   "./",
   "./index.html",
