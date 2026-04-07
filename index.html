@@ -37,8 +37,7 @@ function _drawIcon(s){
 (function(){[{w:1290,h:2796,r:3},{w:1179,h:2556,r:3},{w:1170,h:2532,r:3},{w:1080,h:2340,r:3},{w:828,h:1792,r:2},{w:1125,h:2436,r:3},{w:750,h:1334,r:2},{w:2048,h:2732,r:2},{w:1668,h:2388,r:2}].forEach(function(s){var cv=document.createElement("canvas");cv.width=s.w;cv.height=s.h;var x=cv.getContext("2d");var g=x.createLinearGradient(0,0,0,s.h);g.addColorStop(0,"#0d2244");g.addColorStop(1,"#070f1e");x.fillStyle=g;x.fillRect(0,0,s.w,s.h);x.font=Math.round(s.w*.25)+"px serif";x.textAlign="center";x.textBaseline="middle";x.fillText("\u{1F3C0}",s.w/2,s.h*.4);x.fillStyle="#f0f4ff";x.font="bold "+Math.round(s.w*.06)+"px system-ui,sans-serif";x.fillText("CB Jaca",s.w/2,s.h*.55);var lk=document.createElement("link");lk.rel="apple-touch-startup-image";lk.href=cv.toDataURL("image/png");lk.media="(device-width:"+Math.round(s.w/s.r)+"px) and (device-height:"+Math.round(s.h/s.r)+"px) and (-webkit-device-pixel-ratio:"+s.r+")";document.head.appendChild(lk);});})();
 
 if("serviceWorker" in navigator){
-  const swCode=`const CACHE="cbj-v2";const FILES=["/"];self.addEventListener("install",e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).catch(()=>{}));self.skipWaiting();});self.addEventListener("activate",e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));self.clients.claim();});self.addEventListener("fetch",e=>{e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>new Response("Offline"))));});`;
-  navigator.serviceWorker.register(URL.createObjectURL(new Blob([swCode],{type:"application/javascript"})),{scope:"./"}).catch(()=>{});
+  navigator.serviceWorker.register("sw.js",{scope:"./"});.catch(()=>{});
 }
 </script>
 
