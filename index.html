@@ -622,7 +622,7 @@ const DEFAULT_CFG={riskThreshold:75,features:{teamScore:false,playerScore:false,
 /* ═══════════════════════════════════════
    STATE
 ═══════════════════════════════════════ */
-let S={screen:"hoy",teamId:null,date:td(),teams:[],players:{},sessions:{},matches:{},sf:"all",histMonth:null,clubLogo:null,clubName:"Kortline",cfg:{...DEFAULT_CFG},statsView:"table",matchId:null};
+let S={screen:"hoy",teamId:null,date:td(),teams:[],players:{},sessions:{},matches:{},events:{},sf:"all",histMonth:null,clubLogo:null,clubName:"Kortline",clubAbrev:"",clubLema:"",cfg:{...DEFAULT_CFG},statsView:"table",matchId:null,eventId:null};
 let shareOpen={parents:true,internal:false};
 
 /* ═══════════════════════════════════════
@@ -648,12 +648,12 @@ function justShortLabel(sess,pid){const r=getJR(sess,pid),n=getJN(sess,pid);if(r
    STORAGE
 ═══════════════════════════════════════ */
 function load(){
-  S.teams=lsGet("cbj:t")||[];S.players=lsGet("cbj:p")||{};S.sessions=lsGet("cbj:s")||{};S.matches=lsGet("cbj:m")||{};
-  S.clubLogo=lsGet("cbj:logo")||null;S.clubName=lsGet("cbj:name")||"Kortline";
+  S.teams=lsGet("cbj:t")||[];S.players=lsGet("cbj:p")||{};S.sessions=lsGet("cbj:s")||{};S.matches=lsGet("cbj:m")||{};S.events=lsGet("cbj:ev")||{};
+  S.clubLogo=lsGet("cbj:logo")||null;S.clubName=lsGet("cbj:name")||"Kortline";S.clubAbrev=lsGet("cbj:cabrev")||"";S.clubLema=lsGet("cbj:clema")||"";
   const sc=lsGet("cbj:cfg");
   S.cfg=sc?{...DEFAULT_CFG,...sc,features:{...DEFAULT_CFG.features,...(sc.features||{})}}:{...DEFAULT_CFG};
 }
-function save(){lsSet("cbj:t",S.teams);lsSet("cbj:p",S.players);lsSet("cbj:s",S.sessions);lsSet("cbj:m",S.matches);lsSet("cbj:logo",S.clubLogo);lsSet("cbj:name",S.clubName);lsSet("cbj:cfg",S.cfg);autoBackup();}
+function save(){lsSet("cbj:t",S.teams);lsSet("cbj:p",S.players);lsSet("cbj:s",S.sessions);lsSet("cbj:m",S.matches);lsSet("cbj:ev",S.events);lsSet("cbj:logo",S.clubLogo);lsSet("cbj:name",S.clubName);lsSet("cbj:cabrev",S.clubAbrev);lsSet("cbj:clema",S.clubLema);lsSet("cbj:cfg",S.cfg);autoBackup();}
 function lsGet(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch{return null;}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch{toast("⚠️ Almacenamiento lleno");return false;}}
 let _tt=null;
@@ -663,14 +663,14 @@ let _tt=null;
 ═══════════════════════════════════════ */
 function autoBackup(){
   try{
-    const data={ts:Date.now(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,clubName:S.clubName,cfg:S.cfg};
+    const data={ts:Date.now(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
     lsSet("cbj:autobackup",data);
   }catch(e){}
 }
 
 function exportBackup(){
   const filename=`kortline-backup-${td()}.json`;
-  const data={version:"1.0",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,clubLogo:S.clubLogo,clubName:S.clubName,cfg:S.cfg};
+  const data={version:"1.2",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
   const json=JSON.stringify(data,null,2);
   const blob=new Blob([json],{type:"application/json"});
   // Descarga directa
@@ -711,8 +711,8 @@ function importBackup(input){
       const data=JSON.parse(e.target.result);
       if(!data.teams||!data.players||!data.sessions){toast("⚠️ Archivo no válido");return;}
       _confirm("¿Restaurar este backup? Se sobreescribirán todos los datos actuales.","Restaurar",()=>{
-        S.teams=data.teams||[];S.players=data.players||{};S.sessions=data.sessions||{};S.matches=data.matches||{};
-        S.clubLogo=data.clubLogo||null;S.clubName=data.clubName||"Kortline";
+        S.teams=data.teams||[];S.players=data.players||{};S.sessions=data.sessions||{};S.matches=data.matches||{};S.events=data.events||{};
+        S.clubLogo=data.clubLogo||null;S.clubName=data.clubName||"Kortline";S.clubAbrev=data.clubAbrev||"";S.clubLema=data.clubLema||"";
         S.cfg=data.cfg?{...DEFAULT_CFG,...data.cfg,features:{...DEFAULT_CFG.features,...(data.cfg.features||{})}}:{...DEFAULT_CFG};
         save();document.getElementById("m-club-settings")?.remove();render();toast("✅ Datos restaurados correctamente");
       });
@@ -1058,6 +1058,7 @@ function render(){
   else if(S.screen==="stats")r.innerHTML=stats();
   else if(S.screen==="hist")r.innerHTML=hist();
   else if(S.screen==="share")r.innerHTML=shareScreen();
+  else if(S.screen==="eventos")r.innerHTML=eventos();
   else if(S.screen==="matchList")r.innerHTML=matchList();
   else if(S.screen==="matchDetail")r.innerHTML=matchDetail();
   else if(S.screen==="liveGame")r.innerHTML=liveGame();
@@ -1168,7 +1169,7 @@ function statsHomeScreen(){
 function navBar(){
   const sc=S.screen;
   const onHoy=sc==="hoy"||sc==="home"||sc==="att"||sc==="share";
-  const onEq=sc==="equipos"||sc==="team"||sc==="hist"||sc==="matchList"||sc==="matchDetail"||sc==="liveGame";
+  const onEq=sc==="equipos"||sc==="team"||sc==="hist"||sc==="matchList"||sc==="matchDetail"||sc==="liveGame"||sc==="eventos";
   const onStats=sc==="stats"||sc==="statsHome";
   return`<nav class="nav">
     <button class="nb ${onHoy?"on":""}" onclick="S.screen='hoy';render()"><span class="ni">🏠</span><span>Hoy</span></button>
@@ -1606,6 +1607,7 @@ function team(){
       <button class="qb" onclick="S.statsView='table';S.screen='stats';render()"><div style="font-size:22px">📊</div><div style="font-size:10px;font-weight:700;margin-top:4px;color:var(--td)">ESTADÍSTICAS</div></button>
       <button class="qb" onclick="S.screen='hist';render()"><div style="font-size:22px">📋</div><div style="font-size:10px;font-weight:700;margin-top:4px;color:var(--td)">HISTORIAL</div><div style="font-family:var(--font-d);font-size:14px;color:var(--tm);margin-top:2px">${ts}</div></button>
     </div>
+    <button class="qb" onclick="S.screen='eventos';render()" style="width:100%;border-radius:10px;margin-bottom:12px;padding:12px;display:flex;align-items:center;justify-content:center;gap:10px"><div style="font-size:20px">📅</div><div style="text-align:left"><div style="font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--td)">EVENTOS Y CONVOCATORIAS</div><div style="font-size:11px;color:var(--tm);margin-top:1px">${(S.events[S.teamId]||[]).length} evento${(S.events[S.teamId]||[]).length!==1?"s":""} · Compartir por WhatsApp</div></div><div style="margin-left:auto;color:var(--td);font-size:18px">›</div></button>
     ${attBar}
     <div class="card" style="margin-bottom:14px"><div style="padding:4px 14px 8px"><div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--td);padding-top:10px;margin-bottom:4px">📅 Horario</div>${schedRows}</div></div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><div style="font-family:var(--font-d);font-weight:900;font-size:19px">Plantilla <span style="font-weight:400;font-size:14px;color:var(--td)">(${players.length})</span></div><button onclick="openPlayerModal()" style="background:rgba(255,107,26,.15);color:var(--orange);border:1px solid rgba(255,107,26,.3);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px;font-weight:700">＋ Añadir</button></div>
@@ -1695,6 +1697,286 @@ function shareScreen(){
 }
 
 /* ═══════════════════════════════════════
+   EVENTOS Y CONVOCATORIAS
+═══════════════════════════════════════ */
+function evtList(tid){return S.events[tid]||[];}
+function evtById(tid,eid){return(S.events[tid]||[]).find(e=>e.id===eid)||null;}
+
+function eventos(){
+  const t=S.teams.find(x=>x.id===S.teamId);if(!t){S.screen="team";render();return"";}
+  const today=td();
+  const evts=[...evtList(S.teamId)].sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
+  const upcoming=evts.filter(e=>e.fecha>=today);
+  const past=evts.filter(e=>e.fecha<today);
+
+  function evtCard(e){
+    const isPast=e.fecha<today;
+    const convCnt=(e.convocados||[]).length;
+    const typeLabel=e.tipo==="tecnificacion"?"🔧 Tecnificación":e.tipo==="partido"?"🏟️ Partido":"📌 Evento";
+    const typeBg=e.tipo==="partido"?"rgba(240,99,24,.12)":e.tipo==="tecnificacion"?"rgba(59,130,246,.12)":"rgba(107,114,128,.12)";
+    const typeCol=e.tipo==="partido"?"var(--orange)":e.tipo==="tecnificacion"?"#60a5fa":"var(--td)";
+    return`<div style="background:var(--s);border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden${isPast?";opacity:.6":""}">
+      <div style="height:3px;background:${t.color}"></div>
+      <div style="padding:12px 14px">
+        <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px">
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap">
+              <span style="background:${typeBg};color:${typeCol};border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700">${typeLabel}</span>
+              ${isPast?`<span style="background:rgba(107,114,128,.12);color:var(--tm);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700">Pasado</span>`:""}
+            </div>
+            <div style="font-weight:800;font-size:17px">${e.tipo==="partido"?`vs ${esc(e.rival||"Rival")}`:esc(e.titulo||typeLabel)}</div>
+            ${e.fecha?`<div style="font-size:12px;color:var(--td);margin-top:3px">📅 ${fd(e.fecha,true)}${e.hora?" · 🕐 "+e.hora+"h":""}</div>`:""}
+            ${e.horaConc?`<div style="font-size:12px;color:var(--td)">⏰ Concentración: ${e.horaConc}h</div>`:""}
+            ${e.lugar?`<div style="font-size:12px;color:var(--td)">📍 ${esc(e.lugar)}</div>`:""}
+            ${convCnt>0?`<div style="font-size:12px;color:var(--orange);font-weight:700;margin-top:4px">👥 ${convCnt} convocado${convCnt!==1?"s":""}</div>`:`<div style="font-size:12px;color:var(--tm);margin-top:4px">Sin convocatoria</div>`}
+          </div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button onclick="S.eventId='${e.id}';openEventoConvModal()" style="flex:1;padding:10px;border-radius:8px;border:none;font-weight:700;font-size:13px;cursor:pointer;background:${convCnt>0?"var(--s2)":"linear-gradient(135deg,var(--orange),var(--orange2))"};color:${convCnt>0?"var(--td)":"white"}">${convCnt>0?"✏️ Editar conv.":"👥 Convocar"}</button>
+          ${convCnt>0?`<button onclick="S.eventId='${e.id}';shareEventoConv()" style="padding:10px 13px;border-radius:8px;background:linear-gradient(135deg,#25d366,#128c7e);border:none;cursor:pointer;font-size:17px" title="Compartir por WhatsApp">📤</button>`:""}
+          <button onclick="openEventoModal(evtById('${S.teamId}','${e.id}'))" style="padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--s2);color:var(--td);cursor:pointer;font-size:15px" title="Editar evento">✏️</button>
+          <button onclick="delEvento('${e.id}')" style="padding:10px 12px;border-radius:8px;border:none;background:rgba(239,68,68,.1);color:#ef4444;cursor:pointer;font-size:15px" title="Eliminar">🗑</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  const emptyState=`<div class="empty"><div style="font-size:48px;margin-bottom:12px;opacity:.4">📅</div><div style="font-family:var(--font-d);font-weight:900;font-size:18px;margin-bottom:6px">Sin eventos</div><div style="font-size:14px;color:var(--tm);line-height:1.6">Crea un partido o tecnificación<br/>para generar convocatorias.</div></div>`;
+  const content=evts.length===0?emptyState:
+    (upcoming.length>0?`<div style="font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--td);margin-bottom:8px">📌 PRÓXIMOS</div>${upcoming.map(evtCard).join("")}`:"")
+    +(past.length>0?`<div style="font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--td);margin:${upcoming.length>0?"16px":"0"} 0 8px">🕐 PASADOS</div>${past.map(evtCard).join("")}`:"");
+
+  return`<header class="header"><div class="hrow">
+    <button class="bbtn" onclick="S.screen='team';render()">←</button>
+    <div style="flex:1"><div style="font-family:var(--font-d);font-weight:900;font-size:18px">📅 Eventos</div><div style="font-size:11px;color:var(--orange)">${esc(t?.name||"")} · ${evts.length} evento${evts.length!==1?"s":""}</div></div>
+    <button class="bbtn" onclick="openEventoModal()">＋</button>
+  </div></header>
+  <div class="content">${content}</div>
+  ${navBar()}`;
+}
+
+function buildEventoText(tid,eid){
+  const t=S.teams.find(x=>x.id===tid);
+  const e=evtById(tid,eid);if(!t||!e)return"";
+  const players=pl(tid);
+  const convP=players.filter(p=>(e.convocados||[]).includes(p.id)).sort((a,b)=>(a.number||99)-(b.number||99));
+  const abrev=(S.clubAbrev||S.clubName||"CLUB").toUpperCase();
+  const lema=S.clubLema||"";
+  const typeLabel=e.tipo==="partido"?"PARTIDO":e.tipo==="tecnificacion"?"TECNIFICACIÓN":"EVENTO";
+  const lines=[`🏀 ${abrev} — ${typeLabel}`,"━━━━━━━━━━━━━━━━━━━━━"];
+  if(e.fecha)lines.push(`📅 ${cap(fd(e.fecha,true))}${e.hora?" · 🕐 "+e.hora+"h":""}`);
+  if(e.lugar)lines.push(`📍 ${e.lugar}`);
+  if(e.horaConc)lines.push(`⏰ Concentración: ${e.horaConc}h`);
+  if(e.tipo==="partido"&&e.rival)lines.push(`🆚 ${e.rival}`);
+  if(convP.length){
+    lines.push(`\n*CONVOCADOS (${convP.length}):*`);
+    convP.forEach((p,i)=>lines.push(`${i+1}. ${p.name}${p.number?" — #"+p.number:""}`));
+  }
+  if(e.mensaje)lines.push(`\n💬 ${e.mensaje}`);
+  if(lema)lines.push(`\n${lema}`);
+  lines.push(`\n_${S.clubName}_`);
+  return lines.join("\n");
+}
+
+function shareEventoConv(){
+  const eid=S.eventId;if(!eid)return;
+  const text=buildEventoText(S.teamId,eid);
+  document.getElementById("m-share-evento")?.remove();
+  const el=document.createElement("div");el.id="m-share-evento";
+  el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:flex-end;justify-content:center;";
+  el.onclick=ev=>{if(ev.target===el)el.remove();};
+  el.innerHTML=`<div class="modal">
+    <div class="mhandle"></div>
+    <div class="mtitle">📤 Compartir convocatoria</div>
+    <div style="font-size:12px;color:var(--td);margin-bottom:10px;background:var(--s2);border-radius:8px;padding:8px 10px;border:1px solid var(--border)">Vista previa del mensaje</div>
+    <div class="share-preview" id="ev-prev" style="max-height:200px;overflow-y:auto">${esc(text)}</div>
+    <button class="btn-wa" onclick="shareText(document.getElementById('ev-prev').innerText)">💬 Compartir por WhatsApp</button>
+    <button class="btn-copy" onclick="navigator.clipboard?.writeText(document.getElementById('ev-prev').innerText).then(()=>toast('📋 Copiado'))">📋 Copiar texto</button>
+    <button class="btn-s" onclick="document.getElementById('m-share-evento').remove()">Cerrar</button>
+  </div>`;
+  document.body.appendChild(el);
+}
+
+function openEventoModal(init){
+  const id=init?"m-edit-evt":"m-add-evt";
+  document.getElementById(id)?.remove();
+  const el=document.createElement("div");el.id=id;
+  el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:flex-end;justify-content:center;";
+  el.onclick=ev=>{if(ev.target===el)el.remove();};
+  const tipo=init?.tipo||"partido";
+  el.innerHTML=`<div class="modal" style="max-height:92vh;overflow-y:auto">
+    <div class="mhandle"></div>
+    <div class="mtitle">${init?"Editar evento":"Nuevo evento"}</div>
+    <div class="fg"><label class="fl">Tipo de evento</label>
+      <div style="display:flex;gap:8px" id="${id}-tipos">
+        ${[["partido","🏟️ Partido"],["tecnificacion","🔧 Tecnificación"],["otro","📌 Otro"]].map(([v,l])=>`<button onclick="evtTipoSel(this,'${id}')" data-tipo="${v}" style="flex:1;padding:9px 4px;border-radius:8px;border:2px solid ${tipo===v?"var(--orange)":"var(--border)"};background:${tipo===v?"rgba(240,99,24,.15)":"var(--s2)"};color:${tipo===v?"var(--orange)":"var(--td)"};cursor:pointer;font-weight:700;font-size:11px;line-height:1.3">${l}</button>`).join("")}
+      </div>
+    </div>
+    <div class="fg" id="${id}-rival-wrap" style="${tipo!=="partido"?"display:none":""}"><label class="fl">Rival</label><input class="fi" id="${id}-rival" value="${esc(init?.rival||"")}" placeholder="Nombre del equipo rival"/></div>
+    <div class="fg" id="${id}-tit-wrap" style="${tipo==="partido"?"display:none":""}"><label class="fl">Nombre / descripción</label><input class="fi" id="${id}-tit" value="${esc(init?.titulo||"")}" placeholder="ej. Tecnificación bases · Pretemporada"/></div>
+    <div class="frow">
+      <div class="fg" style="flex:1.3"><label class="fl">Fecha</label><input class="fi" type="date" id="${id}-fecha" value="${esc(init?.fecha||td())}"/></div>
+      <div class="fg" style="flex:1"><label class="fl">Hora</label><input class="fi" type="time" id="${id}-hora" value="${esc(init?.hora||"")}"/></div>
+    </div>
+    <div class="fg"><label class="fl">⏰ Hora concentración</label><input class="fi" type="time" id="${id}-conc" value="${esc(init?.horaConc||"")}" placeholder="Opcional"/></div>
+    <div class="fg"><label class="fl">📍 Lugar</label><input class="fi" id="${id}-lugar" value="${esc(init?.lugar||"")}" placeholder="ej. Pabellón La Nevera"/></div>
+    <div class="fg"><label class="fl">💬 Mensaje del entrenador <span style="color:var(--tm)">(opcional)</span></label><textarea class="fi" id="${id}-msg" rows="2" placeholder="Aparecerá al final de la convocatoria..." style="resize:none">${esc(init?.mensaje||"")}</textarea></div>
+    <button class="btn-p" onclick="saveEvento('${id}','${init?.id||""}')">${init?"Guardar cambios":"Crear y convocar →"}</button>
+    <button class="btn-s" onclick="document.getElementById('${id}').remove()">Cancelar</button>
+  </div>`;
+  document.body.appendChild(el);
+  el._tipo=tipo;
+}
+
+function evtTipoSel(btn,id){
+  const tipo=btn.dataset.tipo;
+  const modal=document.getElementById(id);if(modal)modal._tipo=tipo;
+  document.querySelectorAll(`#${id}-tipos button`).forEach(b=>{
+    const sel=b===btn;
+    b.style.borderColor=sel?"var(--orange)":"var(--border)";
+    b.style.background=sel?"rgba(240,99,24,.15)":"var(--s2)";
+    b.style.color=sel?"var(--orange)":"var(--td)";
+  });
+  const rw=document.getElementById(id+"-rival-wrap");const tw=document.getElementById(id+"-tit-wrap");
+  if(rw)rw.style.display=tipo==="partido"?"":"none";
+  if(tw)tw.style.display=tipo!=="partido"?"":"none";
+}
+
+function saveEvento(mid,eid){
+  const modal=document.getElementById(mid);
+  const tipo=modal?._tipo||(eid?(evtById(S.teamId,eid)?.tipo||"partido"):"partido");
+  const rival=document.getElementById(mid+"-rival")?.value.trim()||"";
+  const titulo=document.getElementById(mid+"-tit")?.value.trim()||"";
+  const fecha=document.getElementById(mid+"-fecha")?.value||td();
+  const hora=document.getElementById(mid+"-hora")?.value||"";
+  const horaConc=document.getElementById(mid+"-conc")?.value||"";
+  const lugar=document.getElementById(mid+"-lugar")?.value.trim()||"";
+  const mensaje=document.getElementById(mid+"-msg")?.value.trim()||"";
+  if(!S.events[S.teamId])S.events[S.teamId]=[];
+  if(eid){
+    S.events[S.teamId]=S.events[S.teamId].map(e=>e.id===eid?{...e,tipo,rival,titulo,fecha,hora,horaConc,lugar,mensaje}:e);
+    document.getElementById(mid)?.remove();save();render();toast("✅ Evento actualizado");
+  } else {
+    const newEvt={id:uid(),tipo,rival,titulo,fecha,hora,horaConc,lugar,mensaje,convocados:[]};
+    S.events[S.teamId].push(newEvt);save();
+    document.getElementById(mid)?.remove();
+    S.eventId=newEvt.id;
+    // Auto-suggest convocados before opening the modal
+    _evtAutoSuggest(S.teamId,newEvt.id);
+    openEventoConvModal();
+  }
+}
+
+function _evtAutoSuggest(tid,eid){
+  const e=evtById(tid,eid);if(!e)return;
+  const players=pl(tid);if(!players.length)return;
+  if((e.convocados||[]).length>0)return; // already has convocados
+  const allSess=Object.entries(S.sessions).filter(([k])=>k.startsWith(tid+"_")).map(([,v])=>v);
+  if(allSess.length>0){
+    const ranked=[...players].sort((a,b)=>{
+      const pa=allSess.filter(s=>(s[a.id]||"present")==="present"||(s[a.id])==="late").length;
+      const pb=allSess.filter(s=>(s[b.id]||"present")==="present"||(s[b.id])==="late").length;
+      return pb-pa;
+    });
+    e.convocados=ranked.map(p=>p.id);
+  } else {
+    e.convocados=players.map(p=>p.id);
+  }
+  save();
+}
+
+function delEvento(eid){
+  _confirm("¿Eliminar este evento y su convocatoria?","🗑 Eliminar",()=>{
+    S.events[S.teamId]=(S.events[S.teamId]||[]).filter(e=>e.id!==eid);
+    save();render();toast("🗑 Evento eliminado");
+  });
+}
+
+function openEventoConvModal(){
+  const eid=S.eventId;if(!eid)return;
+  const t=S.teams.find(x=>x.id===S.teamId);
+  const e=evtById(S.teamId,eid);if(!e){render();return;}
+  const players=[...pl(S.teamId)].sort((a,b)=>(a.number||99)-(b.number||99));
+
+  function convRows(cids){
+    if(!players.length)return'<div style="padding:20px;text-align:center;color:var(--tm);font-size:13px">Sin jugadores en la plantilla. Añádelos desde el equipo.</div>';
+    return players.map(p=>{
+      const inc=cids.includes(p.id);
+      // calc attendance % for badge
+      const allSess=Object.entries(S.sessions).filter(([k])=>k.startsWith(S.teamId+"_")).map(([,v])=>v);
+      const att=allSess.length?pc(allSess.filter(s=>(s[p.id]||"present")==="present"||(s[p.id])==="late").length,allSess.length):null;
+      return`<div class="conv-row" onclick="evtTogglePlayer('${p.id}')">
+        <div class="conv-cb ${inc?"on":""}">${inc?"✓":""}</div>
+        <div class="pnum" style="background:linear-gradient(135deg,${t.color},${t.color}88);width:32px;height:32px;border-radius:8px;font-size:13px">${p.number||"?"}</div>
+        <div style="flex:1"><div style="font-weight:600;font-size:15px">${esc(p.name)}</div><div style="font-size:12px;color:var(--td)">${esc(p.position||"—")}</div></div>
+        ${att!==null?`<div style="font-size:12px;font-weight:700;color:${att>=90?"#22c55e":att>=75?"#f59e0b":"#ef4444"}">${att}%</div>`:""}
+      </div>`;
+    }).join("");
+  }
+
+  const cids=e.convocados||[];
+  const typeLabel=e.tipo==="partido"?`🏟️ vs ${esc(e.rival||"Rival")}`:e.tipo==="tecnificacion"?"🔧 Tecnificación":esc(e.titulo||"Evento");
+  document.getElementById("m-evt-conv")?.remove();
+  const el=document.createElement("div");el.id="m-evt-conv";
+  el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.92);z-index:9999;display:flex;align-items:flex-end;justify-content:center;";
+  el.onclick=ev=>{if(ev.target===el){el.remove();render();}};
+  el.innerHTML=`<div class="modal" style="max-height:94vh;overflow-y:auto">
+    <div class="mhandle"></div>
+    <div style="font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--orange);margin-bottom:2px">CONVOCATORIA</div>
+    <div style="font-weight:900;font-size:18px;margin-bottom:2px">${typeLabel}</div>
+    <div style="font-size:12px;color:var(--td);margin-bottom:12px">${e.fecha?fd(e.fecha,true):""}${e.hora?" · "+e.hora+"h":""}</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div id="ev-conv-count" style="font-size:13px;font-weight:700;color:var(--orange)">${cids.length} convocado${cids.length!==1?"s":""}</div>
+      <div style="display:flex;gap:6px">
+        <button onclick="evtConvAll()" style="padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:var(--s2);color:var(--td);cursor:pointer;font-size:12px;font-weight:700">Todos</button>
+        <button onclick="evtConvNone()" style="padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:var(--s2);color:var(--td);cursor:pointer;font-size:12px;font-weight:700">Ninguno</button>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--tm);margin-bottom:8px">El % de asistencia ayuda a decidir la convocatoria. Toca para marcar/desmarcar.</div>
+    <div class="card" id="ev-conv-list" style="margin-bottom:12px;max-height:42vh;overflow-y:auto">${convRows(cids)}</div>
+    <button class="btn-wa" onclick="document.getElementById('m-evt-conv').remove();S.eventId='${eid}';shareEventoConv()">📤 Guardar y compartir</button>
+    <button class="btn-p" onclick="document.getElementById('m-evt-conv').remove();render()">✅ Guardar convocatoria</button>
+    <button class="btn-s" onclick="document.getElementById('m-evt-conv').remove();render()">Cerrar</button>
+  </div>`;
+  document.body.appendChild(el);
+}
+
+function evtTogglePlayer(pid){
+  const e=evtById(S.teamId,S.eventId);if(!e)return;
+  if(!e.convocados)e.convocados=[];
+  if(e.convocados.includes(pid)){e.convocados=e.convocados.filter(x=>x!==pid);}
+  else{e.convocados.push(pid);}
+  save();
+  // Actualizar lista sin re-render completo
+  const t=S.teams.find(x=>x.id===S.teamId);
+  const players=[...pl(S.teamId)].sort((a,b)=>(a.number||99)-(b.number||99));
+  const cids=e.convocados;
+  const allSess=Object.entries(S.sessions).filter(([k])=>k.startsWith(S.teamId+"_")).map(([,v])=>v);
+  const list=document.getElementById("ev-conv-list");
+  if(list){list.innerHTML=players.map(p=>{
+    const inc=cids.includes(p.id);
+    const att=allSess.length?pc(allSess.filter(s=>(s[p.id]||"present")==="present"||(s[p.id])==="late").length,allSess.length):null;
+    return`<div class="conv-row" onclick="evtTogglePlayer('${p.id}')">
+      <div class="conv-cb ${inc?"on":""}">${inc?"✓":""}</div>
+      <div class="pnum" style="background:linear-gradient(135deg,${t.color},${t.color}88);width:32px;height:32px;border-radius:8px;font-size:13px">${p.number||"?"}</div>
+      <div style="flex:1"><div style="font-weight:600;font-size:15px">${esc(p.name)}</div><div style="font-size:12px;color:var(--td)">${esc(p.position||"—")}</div></div>
+      ${att!==null?`<div style="font-size:12px;font-weight:700;color:${att>=90?"#22c55e":att>=75?"#f59e0b":"#ef4444"}">${att}%</div>`:""}
+    </div>`;
+  }).join("");}
+  const cnt=document.getElementById("ev-conv-count");
+  if(cnt)cnt.textContent=cids.length+" convocado"+(cids.length!==1?"s":"");
+}
+
+function evtConvAll(){
+  const e=evtById(S.teamId,S.eventId);if(!e)return;
+  e.convocados=pl(S.teamId).map(p=>p.id);save();openEventoConvModal();
+}
+function evtConvNone(){
+  const e=evtById(S.teamId,S.eventId);if(!e)return;
+  e.convocados=[];save();openEventoConvModal();
+}
+
+/* ═══════════════════════════════════════
    MODALS
 ═══════════════════════════════════════ */
 function openClubSettings(){
@@ -1714,6 +1996,8 @@ function openClubSettings(){
         ${S.clubLogo?`<button onclick="S.clubLogo=null;save();render()" style="font-size:12px;color:#ef4444;background:none;border:none;cursor:pointer;margin-top:6px">✕ Quitar</button>`:""}</div>
       </div>
       <div class="fg"><label class="fl">Nombre del club</label><input class="fi" id="cfg-name" value="${esc(S.clubName)}"/></div>
+      <div class="fg"><label class="fl">Abreviatura <span style="color:var(--tm)">(para mensajes WhatsApp)</span></label><input class="fi" id="cfg-abrev" value="${esc(S.clubAbrev)}" placeholder="ej. CB JACA"/></div>
+      <div class="fg"><label class="fl">Lema / cierre <span style="color:var(--tm)">(opcional)</span></label><input class="fi" id="cfg-lema" value="${esc(S.clubLema)}" placeholder="ej. ¡Vamos FamiliaCBJaca! 🏀"/><div style="font-size:11px;color:var(--tm);margin-top:4px">Aparece al final de las convocatorias por WhatsApp. Déjalo vacío para no incluirlo.</div></div>
     </div>
     <div class="stg-sec">
       <div class="stg-sec-title">🔧 Funciones del entrenamiento</div>
@@ -1744,7 +2028,7 @@ function openClubSettings(){
       <div class="stg-sec-title">ℹ️ Acerca de</div>
       <div style="text-align:center;padding:18px 0 6px">
         <img src="${_FULL_SVG_URL}" style="height:36px;max-width:100%;opacity:0.9;margin-bottom:10px"/>
-        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.1.0 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
+        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.2.0 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
       </div>
     </div>
     <button class="btn-p" onclick="saveClubSettings()">Guardar configuración</button>
@@ -1858,7 +2142,7 @@ function togCol(el,gid){document.querySelectorAll("#"+gid+" .cdot").forEach(d=>d
 function toggleDayTime(cb,tid){const ti=document.getElementById(tid);if(!ti)return;ti.disabled=!cb.checked;if(!cb.checked)ti.value="";}
 function toggleFeat(key){S.cfg.features[key]=!S.cfg.features[key];const btn=document.querySelector(`[onclick="toggleFeat('${key}')"]`);if(btn){btn.classList.toggle("on",S.cfg.features[key]);}}
 function handleLogo(input){const file=input.files[0];if(!file)return;const r=new FileReader();r.onload=e=>{S.clubLogo=e.target.result;save();render();toast("✅ Logo actualizado");};r.readAsDataURL(file);}
-function saveClubSettings(){const name=document.getElementById("cfg-name")?.value.trim();if(name)S.clubName=name;const risk=document.getElementById("cfg-risk")?.value;if(risk)S.cfg.riskThreshold=parseInt(risk);save();document.getElementById("m-club-settings")?.remove();render();toast("✅ Configuración guardada");}
+function saveClubSettings(){const name=document.getElementById("cfg-name")?.value.trim();if(name)S.clubName=name;const abrev=document.getElementById("cfg-abrev")?.value.trim();S.clubAbrev=abrev!==undefined?abrev:S.clubAbrev;const lema=document.getElementById("cfg-lema")?.value.trim();S.clubLema=lema!==undefined?lema:S.clubLema;const risk=document.getElementById("cfg-risk")?.value;if(risk)S.cfg.riskThreshold=parseInt(risk);save();document.getElementById("m-club-settings")?.remove();render();toast("✅ Configuración guardada");}
 function saveTeam(mid,eid){
   const name=document.getElementById(mid+"-n").value.trim();if(!name)return;
   const cat=document.getElementById(mid+"-cat").value;
@@ -2114,6 +2398,7 @@ ${r==="W"?"🏆":r==="L"?"❌":"🤝"} *Resultado: ${o} — ${th}* (${mResultLab
   }
   if(internal&&m.notes)lines.push(`
 📝 ${m.notes}`);
+  if(S.clubLema)lines.push(`\n${S.clubLema}`);
   lines.push(`
 _${S.clubName}_`);
   return lines.join("\n");

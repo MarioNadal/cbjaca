@@ -38,6 +38,9 @@ Gestión del calendario de partidos por equipo. Registro de resultados y detalle
 ### 🔴 Marcador en vivo
 Pantalla de marcador con reloj de juego, control de períodos, tiempos muertos y registro en tiempo real.
 
+### 📅 Eventos y Convocatorias *(nuevo en v1.2.0)*
+Gestión de eventos por equipo: partidos, tecnificaciones o cualquier otro tipo de convocatoria. Selección de jugadores convocados con sugerencia automática basada en el porcentaje de asistencia. Genera un mensaje listo para compartir por WhatsApp con los datos del evento y el lema personalizado del club.
+
 ### 📤 Exportación
 Exporta los datos a **PDF** (jsPDF + autotable) o **Excel** (SheetJS/XLSX).
 
@@ -93,6 +96,7 @@ No requiere servidor, base de datos ni configuración. Listo para usar.
 | v0.9 | Mar 2026 | App interna CB Jaca — pase de lista y asistencia |
 | v1.0.0 | Abr 2026 | Rebrand a Kortline, logos SVG v1, partidos, marcador en vivo, exportación PDF/Excel |
 | v1.1.0 | Abr 2026 | Sistema de backup/restore: export JSON, import, recordatorio automático cada 7 días, compartir backup por WhatsApp/iCloud/Drive |
+| v1.2.0 | Abr 2026 | Eventos y convocatorias por WhatsApp: partidos, tecnificaciones y otros. Sugerencia automática por asistencia. Configuración de abreviatura y lema del club. |
 
 ---
 
