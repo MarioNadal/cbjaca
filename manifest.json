@@ -1,8 +1,8 @@
-h{
-  "id": "/driveline-app/",
-  "name": "Driveline",
-  "short_name": "Driveline",
-  "description": "Gestión deportiva Driveline Basketball",
+{
+  "id": "/kortline-app/",
+  "name": "Kortline",
+  "short_name": "Kortline",
+  "description": "Gestión deportiva Kortline Basketball",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
