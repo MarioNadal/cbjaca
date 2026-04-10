@@ -91,7 +91,7 @@ if("serviceWorker" in navigator){
   --font-b:'DM Sans',system-ui,sans-serif;
   --r:12px;
 }
-body{font-family:var(--font-b);background:var(--bg);color:var(--tx);min-height:100vh;background-image:radial-gradient(rgba(29,54,84,0.22) 1px,transparent 1px);background-size:24px 24px;overflow-x:hidden;;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;overscroll-behavior-y:none;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);}
+body{font-family:var(--font-b);background:var(--bg);color:var(--tx);min-height:100vh;min-height:100dvh;background-image:radial-gradient(rgba(29,54,84,0.22) 1px,transparent 1px);background-size:24px 24px;overflow-x:hidden;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;overscroll-behavior-y:none;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);}
 #root{max-width:430px;margin:0 auto;position:relative;overflow-x:hidden;}
 
 /* ── Header ── */
@@ -293,8 +293,16 @@ select.fi option{background:#0c1828;}
 .sb-badge{font-size:10px;color:var(--td);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-top:3px;}
 .sb-score{font-family:var(--font-d);font-weight:900;font-size:50px;line-height:1;text-align:center;}
 .sb-vs{font-family:var(--font-d);font-weight:900;font-size:16px;color:var(--tm);}
-.q-input{width:100%;background:var(--s3);border:1px solid var(--border);border-radius:6px;padding:5px 2px;color:var(--tx);font-family:var(--font-d);font-weight:900;font-size:18px;text-align:center;outline:none;}
-.q-input:focus{border-color:var(--orange);}
+.q-stepper{display:flex;align-items:center;gap:2px;justify-content:center;margin-bottom:3px;}
+.q-stepper:last-child{margin-bottom:0;}
+.q-stepper-val{font-family:var(--font-d);font-weight:900;font-size:16px;color:var(--tx);min-width:22px;text-align:center;line-height:1;cursor:pointer;}
+.q-stepper-btn{width:22px;height:22px;border-radius:5px;border:1px solid var(--border);background:var(--s2);color:var(--tx);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;-webkit-tap-highlight-color:transparent;touch-action:manipulation;padding:0;position:relative;}
+.q-stepper-btn:active{background:var(--orange);border-color:var(--orange);color:white;opacity:1;}
+/* Extender área táctil a ~44px sin cambiar el visual — importante en Android */
+.q-stepper-btn::after{content:'';position:absolute;top:-11px;right:-11px;bottom:-11px;left:-11px;}
+/* Select con flecha custom — Android no aplica ::-webkit-appearance bien */
+.fi select,.fi{background-image:none;}
+select.fi{padding-right:28px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a9cc8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;}
 .loc-btn{flex:1;padding:9px 6px;border-radius:9px;border:1px solid var(--border);background:var(--s2);color:var(--td);font-size:12px;font-weight:700;cursor:pointer;text-align:center;}
 .loc-btn.on{background:rgba(255,107,26,.15);border-color:var(--orange);color:var(--orange);}
 .conv-player{display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);gap:10px;cursor:pointer;}
@@ -362,6 +370,12 @@ select.fi option{background:#0c1828;}
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
 @media all and (display-mode:standalone){body{padding-top:0;}.header{padding-top:calc(14px + env(safe-area-inset-top));}}
 button,input,select,textarea{-webkit-user-select:auto;user-select:auto;}
+/* Touch targets y feedback táctil — crítico para Android */
+button{touch-action:manipulation;-webkit-tap-highlight-color:transparent;cursor:pointer;}
+button:active{opacity:.75;}
+/* Inputs: quitar apariencia nativa en todos los navegadores */
+input,textarea{-webkit-appearance:none;appearance:none;}
+select{-webkit-appearance:none;appearance:none;}
 input[type="text"],input[type="number"],input[type="tel"],input[type="email"],select,textarea{font-size:16px!important;}
 .modal{-webkit-overflow-scrolling:touch;}
 .content{-webkit-overflow-scrolling:touch;}
@@ -391,6 +405,7 @@ function startClock(){
       if(s===120)_clockAlert("⏱ 2 minutos");
       else if(s===60)_clockAlert("⏱ 1 minuto");
       else if(s===30)_clockAlert("⚡ 30 segundos");
+      else if(s===10)_clockAlert("🔴 ¡10 segundos!",1800);
       // Update clock display without full render
       const el=document.getElementById("live-clock");
       if(el){el.textContent=_fmtClock(s);el.style.color=s===0?"#ef4444":s<60?"#f59e0b":"var(--tx)";}
@@ -413,8 +428,11 @@ function startClock(){
         m.live.clockSec=(m.live.clockMins||m.qMins||10)*60;
         m.live.clockRunning=false;
         save();render();
-        _clockAlert("🔔 Fin del "+periodName,2500);
-        _startBreakTimer(pLabel+(curQ+1));
+        _clockAlert("🔔 Fin del "+periodName,2000);
+        const _isHalfTime=curQ===(Math.floor(nQ/2));
+        const _breakSec=_isHalfTime?10*60:1*60;
+        const _breakLabel=_isHalfTime?"⏸ Medio tiempo":"Descanso";
+        setTimeout(()=>_showEndPeriodOverlay(periodName,pLabel+(curQ+1),curQ,_breakSec,_breakLabel),2100);
       } else {
         const qs=(m.live.qScores||[]).map(s=>s||[0,0]);
         const ourT=qs.reduce((s,q)=>s+(q[0]||0),0);
@@ -467,25 +485,46 @@ function editClock(){
   el.innerHTML=`<div class="modal" style="padding:18px">
     <div class="mhandle"></div>
     <div style="font-weight:900;font-size:17px;margin-bottom:4px">✏️ Editar tiempo</div>
-    <div style="font-size:12px;color:var(--td);margin-bottom:16px">Introduce el tiempo restante del cuarto</div>
+    <div style="font-size:12px;color:var(--td);margin-bottom:16px">+/− para ajustar · toca el número para escribir</div>
     <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:18px">
       <div style="text-align:center">
-        <label style="font-size:10px;font-weight:700;color:var(--td);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px">MIN</label>
-        <input id="ec-min" type="number" min="0" max="99" value="${curM}" style="width:72px;text-align:center;font-family:var(--font-d);font-size:36px;font-weight:900;background:var(--s2);border:1px solid var(--border);border-radius:10px;color:var(--tx);padding:8px 4px;outline:none"/>
+        <label style="font-size:10px;font-weight:700;color:var(--td);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:8px">MIN</label>
+        <div style="display:flex;align-items:center;gap:6px">
+          <button onclick="_ecStep('min',-1)" class="q-stepper-btn" style="width:38px;height:38px;font-size:22px">−</button>
+          <input id="ec-min" type="text" inputmode="numeric" pattern="[0-9]*" value="${curM}" style="width:64px;text-align:center;font-family:var(--font-d);font-size:36px;font-weight:900;background:var(--s2);border:1.5px solid var(--border);border-radius:10px;color:var(--tx);padding:6px 2px;outline:none;-webkit-appearance:none;appearance:none"/>
+          <button onclick="_ecStep('min',1)" class="q-stepper-btn" style="width:38px;height:38px;font-size:22px">+</button>
+        </div>
       </div>
       <div style="font-family:var(--font-d);font-size:40px;font-weight:900;color:var(--tm);padding-top:14px">:</div>
       <div style="text-align:center">
-        <label style="font-size:10px;font-weight:700;color:var(--td);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px">SEG</label>
-        <input id="ec-sec" type="number" min="0" max="59" value="${curS}" style="width:72px;text-align:center;font-family:var(--font-d);font-size:36px;font-weight:900;background:var(--s2);border:1px solid var(--border);border-radius:10px;color:var(--tx);padding:8px 4px;outline:none"/>
+        <label style="font-size:10px;font-weight:700;color:var(--td);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:8px">SEG</label>
+        <div style="display:flex;align-items:center;gap:6px">
+          <button onclick="_ecStep('sec',-1)" class="q-stepper-btn" style="width:38px;height:38px;font-size:22px">−</button>
+          <input id="ec-sec" type="text" inputmode="numeric" pattern="[0-9]*" value="${curS<10?"0"+curS:curS}" style="width:64px;text-align:center;font-family:var(--font-d);font-size:36px;font-weight:900;background:var(--s2);border:1.5px solid var(--border);border-radius:10px;color:var(--tx);padding:6px 2px;outline:none;-webkit-appearance:none;appearance:none"/>
+          <button onclick="_ecStep('sec',1)" class="q-stepper-btn" style="width:38px;height:38px;font-size:22px">+</button>
+        </div>
       </div>
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
-      ${[60,120,180,240,300,480,600].map(s=>`<button onclick="document.getElementById('ec-min').value=Math.floor(${s}/60);document.getElementById('ec-sec').value=${s%60}" style="padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:var(--s2);color:var(--td);cursor:pointer;font-size:12px;font-weight:700">${_fmtClock(s)}</button>`).join("")}
+      ${[60,120,180,240,300,480,600].map(s=>`<button onclick="_ecPreset(${s})" style="padding:6px 10px;border-radius:7px;border:1px solid var(--border);background:var(--s2);color:var(--td);cursor:pointer;font-size:12px;font-weight:700">${_fmtClock(s)}</button>`).join("")}
     </div>
     <button onclick="applyEditClock()" class="btn-p">Aplicar</button>
     <button onclick="document.getElementById('m-editclock').remove()" class="btn-s">Cancelar</button>
   </div>`;
   document.body.appendChild(el);
+}
+function _ecStep(field,delta){
+  const id=field==="min"?"ec-min":"ec-sec";
+  const inp=document.getElementById(id);if(!inp)return;
+  const max=field==="min"?99:59;
+  const cur=parseInt(inp.value)||0;
+  const next=Math.max(0,Math.min(max,cur+delta));
+  inp.value=field==="sec"?(next<10?"0"+next:next):next;
+}
+function _ecPreset(secs){
+  const m=Math.floor(secs/60),s=secs%60;
+  const mi=document.getElementById("ec-min"),si=document.getElementById("ec-sec");
+  if(mi)mi.value=m;if(si)si.value=s<10?"0"+s:s;
 }
 function applyEditClock(){
   const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
@@ -510,147 +549,327 @@ function _clockAlert(msg,dur=2000){
 
 let _breakTimer=null;
 let _breakSec=0;
-function _startBreakTimer(nextPeriodLabel){
+function _startBreakTimer(nextPeriodLabel,durationSec,breakLabel){
   if(_breakTimer)clearInterval(_breakTimer);
-  _breakSec=60;
-  // Show break overlay
-  _showBreakOverlay(_breakSec, nextPeriodLabel);
+  _breakSec=durationSec||120;
+  _showBreakOverlay(_breakSec,nextPeriodLabel,breakLabel||"Descanso");
   _breakTimer=setInterval(()=>{
     _breakSec--;
+    const mm=Math.floor(_breakSec/60),ss=_breakSec%60;
+    const fmt=mm+":"+(ss<10?"0":"")+ss;
     const el=document.getElementById("break-overlay-count");
-    if(el)el.textContent=_breakSec;
+    if(el)el.textContent=fmt;
     if(_breakSec<=0){
       clearInterval(_breakTimer);_breakTimer=null;
       document.getElementById("break-overlay")?.remove();
-      // toast that break is over
       _clockAlert("▶ "+nextPeriodLabel+" — ¡A jugar!",2000);
     }
   },1000);
 }
-function _showBreakOverlay(sec, nextLabel){
+function _showBreakOverlay(sec,nextLabel,breakLabel){
   document.getElementById("break-overlay")?.remove();
   const el=document.createElement("div");
   el.id="break-overlay";
-  el.style.cssText="position:fixed;bottom:84px;left:50%;transform:translateX(-50%);z-index:9990;width:calc(100% - 32px);max-width:398px;";
-  el.innerHTML=`<div style="background:linear-gradient(135deg,rgba(13,34,68,.97),rgba(7,15,30,.97));border:1px solid rgba(249,115,22,.4);border-radius:14px;padding:12px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.6)">
-    <div style="width:44px;height:44px;border-radius:10px;background:rgba(249,115,22,.15);border:1px solid rgba(249,115,22,.3);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0">
-      <span id="break-overlay-count" style="font-family:var(--font-d);font-weight:900;font-size:22px;color:var(--orange);line-height:1">${sec}</span>
-      <span style="font-size:8px;color:var(--td);font-weight:700;letter-spacing:.5px">SEG</span>
-    </div>
-    <div style="flex:1">
-      <div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--td)">DESCANSO</div>
-      <div style="font-weight:800;font-size:14px;color:var(--tx);margin-top:1px">Próximo: <span style="color:var(--orange)">${nextLabel}</span></div>
-    </div>
-    <button onclick="clearInterval(_breakTimer);_breakTimer=null;document.getElementById('break-overlay').remove();_clockAlert('▶ ${nextLabel} — ¡A jugar!',1500)" style="background:rgba(249,115,22,.2);border:1px solid rgba(249,115,22,.35);border-radius:8px;padding:7px 12px;color:var(--orange);font-weight:800;font-size:12px;cursor:pointer;flex-shrink:0">Saltar</button>
+  el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(7,15,30,.93);z-index:9995;display:flex;align-items:center;justify-content:center;padding:20px;";
+  const mm=Math.floor(sec/60),ss=sec%60;
+  const fmt=mm+":"+(ss<10?"0":"")+ss;
+  el.innerHTML=`<div style="background:var(--s);border:1px solid rgba(249,115,22,.35);border-radius:18px;padding:28px 24px;width:100%;max-width:340px;text-align:center">
+    <div style="font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--orange);margin-bottom:10px">${breakLabel}</div>
+    <div id="break-overlay-count" style="font-family:var(--font-d);font-weight:900;font-size:64px;color:var(--tx);line-height:1;margin-bottom:6px">${fmt}</div>
+    <div style="font-size:13px;color:var(--td);margin-bottom:22px">Próximo: <b style="color:var(--tx)">${nextLabel}</b></div>
+    <button onclick="clearInterval(_breakTimer);_breakTimer=null;document.getElementById('break-overlay').remove();_clockAlert('▶ ${nextLabel} — ¡A jugar!',2000)" style="width:100%;padding:14px;border:none;border-radius:10px;font-weight:900;font-size:16px;cursor:pointer;background:linear-gradient(135deg,var(--orange),#c2410c);color:white;font-family:var(--font-d);letter-spacing:.5px">▶ Iniciar ${nextLabel}</button>
   </div>`;
   document.body.appendChild(el);
 }
 
-function openTimeoutModal(){
-  // Show mini modal to choose which team calls the timeout
-  document.getElementById("m-tm")?.remove();
-  const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
-  const t=S.teams.find(x=>x.id===S.teamId);
+// Registro de acción en el overlay de fin de cuarto (sin render)
+function _endPeriodAction(pid,action,pts,qIdx,isRival){
+  const m=mById(S.teamId,S.matchId);if(!m?.live)return;
+  if(isRival){
+    if(pts>0&&m.live.qScores?.[qIdx])m.live.qScores[qIdx][1]+=pts;
+    m.live.log.push({pid:"rival",action:"rival",pts,q:qIdx+1,ts:Date.now()});
+  } else {
+    if(!m.live.stats[pid])m.live.stats[pid]={p1m:0,p1a:0,p2m:0,p2a:0,p3m:0,p3a:0,ro:0,rd:0,ast:0,foul:0,stl:0,blk:0,to:0};
+    m.live.stats[pid][action]=(m.live.stats[pid][action]||0)+1;
+    if(pts>0&&m.live.qScores?.[qIdx])m.live.qScores[qIdx][0]+=pts;
+    if(action==="foul"&&m.live.teamFouls?.[qIdx]!==undefined)m.live.teamFouls[qIdx]++;
+    m.live.log.push({pid,action,pts,q:qIdx+1,ts:Date.now()});
+  }
+  _syncLiveQ(m);save();
+  // Actualizar marcador en el overlay sin re-render
+  const qs=m.live.qScores||[];
+  const our=qs.reduce((s,q)=>s+(q[0]||0),0);
+  const riv=qs.reduce((s,q)=>s+(q[1]||0),0);
+  const sc=document.getElementById("eop-score");if(sc)sc.textContent=our+" — "+riv;
+  const fb=document.getElementById("eop-fb");
+  if(fb){fb.textContent="✓";fb.style.opacity="1";setTimeout(()=>{if(fb)fb.style.opacity="0";},900);}
+}
+
+function _showEndPeriodOverlay(periodName,nextLabel,prevQ,breakSec,breakLabel){
+  document.getElementById("m-end-period")?.remove();
+  const m=mById(S.teamId,S.matchId);if(!m?.live)return;
   const live=m.live;
-  const q=live.q||1;
-  // Compute used timeouts per half
-  const to=live.timeouts||{our:[0,0,0,0,0,0],rival:[0,0,0,0,0,0]};
-  const ourH1=(to.our[0]||0)+(to.our[1]||0);
-  const ourH2=(to.our[2]||0)+(to.our[3]||0);
-  const rivH1=(to.rival[0]||0)+(to.rival[1]||0);
-  const rivH2=(to.rival[2]||0)+(to.rival[3]||0);
-  const ourRemH1=Math.max(0,2-ourH1), ourRemH2=Math.max(0,3-ourH2);
-  const rivRemH1=Math.max(0,2-rivH1), rivRemH2=Math.max(0,3-rivH2);
-  const isH1=q<=2, isH2=q===3||q===4;
-  const ourRem=isH1?ourRemH1:isH2?ourRemH2:99;
-  const rivRem=isH1?rivRemH1:isH2?rivRemH2:99;
-  const el=document.createElement("div");el.id="m-tm";
-  el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.75);z-index:9999;display:flex;align-items:flex-end;justify-content:center;";
-  el.onclick=e=>{if(e.target===el)el.remove();};
-  el.innerHTML=`<div class="modal" style="padding:16px">
-    <div class="mhandle"></div>
-    <div style="font-weight:900;font-size:17px;margin-bottom:4px">⏱ Tiempo Muerto</div>
-    <div style="font-size:12px;color:var(--td);margin-bottom:14px">¿Qué equipo pide el tiempo muerto?</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-      <button onclick="addTimeout('our');document.getElementById('m-tm').remove()" style="padding:14px 8px;border-radius:11px;border:1px solid ${ourRem>0?"rgba(249,115,22,.5)":"rgba(239,68,68,.3)"};background:${ourRem>0?"rgba(249,115,22,.12)":"rgba(239,68,68,.08)"};cursor:${ourRem>0?"pointer":"not-allowed"};color:${ourRem>0?"var(--tx)":"#ef4444"}" ${ourRem<=0?"disabled":""}>
-        <div style="font-size:18px;margin-bottom:4px">🏠</div>
-        <div style="font-weight:800;font-size:13px">${esc(t?.name||"Nuestro equipo")}</div>
-        <div style="font-size:11px;margin-top:4px;color:${ourRem>0?"var(--td)":"#ef4444"}">${ourRem>0?ourRem+" restante"+(ourRem!==1?"s":""):"Agotados"} ${isH1?"(1ª mitad)":isH2?"(2ª mitad)":""}</div>
-      </button>
-      <button onclick="addTimeout('rival');document.getElementById('m-tm').remove()" style="padding:14px 8px;border-radius:11px;border:1px solid ${rivRem>0?"rgba(100,150,255,.4)":"rgba(239,68,68,.3)"};background:${rivRem>0?"rgba(100,150,255,.08)":"rgba(239,68,68,.08)"};cursor:${rivRem>0?"pointer":"not-allowed"};color:${rivRem>0?"var(--tx)":"#ef4444"}" ${rivRem<=0?"disabled":""}>
-        <div style="font-size:18px;margin-bottom:4px">✈️</div>
-        <div style="font-weight:800;font-size:13px">${esc(m.rival||"Rival")}</div>
-        <div style="font-size:11px;margin-top:4px;color:${rivRem>0?"var(--td)":"#ef4444"}">${rivRem>0?rivRem+" restante"+(rivRem!==1?"s":""):"Agotados"} ${isH1?"(1ª mitad)":isH2?"(2ª mitad)":""}</div>
-      </button>
+  const qIdx=prevQ-1; // 0-indexed del cuarto que acaba de terminar
+  const qs=live.qScores||[];
+  const our=qs.reduce((s,q)=>s+(q[0]||0),0);
+  const riv=qs.reduce((s,q)=>s+(q[1]||0),0);
+  const players=pl(S.teamId);
+  const onCourt=(live.onCourt||[]).map(id=>players.find(p=>p.id===id)).filter(Boolean);
+  const rival=m.rival||"Rival";
+
+  function playerBtns(pid){
+    const p=players.find(x=>x.id===pid);if(!p)return"";
+    return`<div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px">
+      <div style="font-size:11px;font-weight:800;color:var(--orange);margin-bottom:8px">${esc(p.name)} #${p.number||"?"}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <button onclick="_endPeriodAction('${pid}','p2m',2,${qIdx},false)" style="padding:9px;border-radius:8px;border:1px solid var(--border);background:rgba(34,197,94,.12);color:#22c55e;font-weight:800;font-size:13px;cursor:pointer">+2 Canasta</button>
+        <button onclick="_endPeriodAction('${pid}','p3m',3,${qIdx},false)" style="padding:9px;border-radius:8px;border:1px solid var(--border);background:rgba(34,197,94,.12);color:#22c55e;font-weight:800;font-size:13px;cursor:pointer">+3 Triple</button>
+        <button onclick="_endPeriodAction('${pid}','p1m',1,${qIdx},false)" style="padding:9px;border-radius:8px;border:1px solid var(--border);background:rgba(34,197,94,.1);color:#86efac;font-weight:800;font-size:13px;cursor:pointer">+1 TL</button>
+        <button onclick="_endPeriodAction('${pid}','foul',0,${qIdx},false)" style="padding:9px;border-radius:8px;border:1px solid var(--border);background:rgba(239,68,68,.12);color:#ef4444;font-weight:800;font-size:13px;cursor:pointer">Falta</button>
+      </div>
+    </div>`;
+  }
+
+  const selPid=live.selPid||null;
+  const courtGrid=onCourt.map(p=>`<button onclick="document.getElementById('m-end-period-acts').innerHTML=window._eopPlayerBtns('${p.id}')" style="padding:7px 4px;border-radius:8px;border:1px solid var(--border);background:var(--s2);color:var(--tx);font-size:12px;font-weight:700;cursor:pointer;text-align:center">#${p.number||"?"}<br><span style="font-size:10px;color:var(--td)">${esc((p.name||"").split(" ")[0])}</span></button>`).join("");
+
+  // Exponer función para usarla desde onclick
+  window._eopPlayerBtns=playerBtns;
+
+  const el=document.createElement("div");
+  el.id="m-end-period";
+  el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(7,15,30,.95);z-index:9995;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;overflow-y:auto;";
+  el.innerHTML=`<div style="background:var(--s);border:1px solid var(--border);border-radius:18px;padding:22px 18px;width:100%;max-width:340px">
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:12px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--orange);margin-bottom:6px">Fin del ${periodName}</div>
+      <div id="eop-score" style="font-family:var(--font-d);font-weight:900;font-size:48px;color:var(--tx);line-height:1">${our} — ${riv}</div>
+      <span id="eop-fb" style="font-size:12px;color:#22c55e;font-weight:700;opacity:0;transition:opacity .3s"></span>
     </div>
-    <button onclick="document.getElementById('m-tm').remove()" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--s2);color:var(--td);cursor:pointer;font-weight:700">Cancelar</button>
+    <div style="font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--td);margin-bottom:8px">Acciones del último segundo</div>
+    <div style="display:grid;grid-template-columns:repeat(${Math.min(onCourt.length,5)},1fr);gap:6px;margin-bottom:10px">${courtGrid}</div>
+    <div id="m-end-period-acts">${selPid?playerBtns(selPid):""}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:16px">
+      <button onclick="_endPeriodAction('rival','rival',2,${qIdx},true)" style="padding:9px;border-radius:8px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.1);color:#ef4444;font-weight:800;font-size:12px;cursor:pointer">+2 ${esc(rival)}</button>
+      <button onclick="_endPeriodAction('rival','rival',3,${qIdx},true)" style="padding:9px;border-radius:8px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.1);color:#ef4444;font-weight:800;font-size:12px;cursor:pointer">+3 ${esc(rival)}</button>
+    </div>
+    <button onclick="document.getElementById('m-end-period').remove();_startBreakTimer('${nextLabel}',${breakSec},'${breakLabel}')" style="width:100%;padding:14px;border:none;border-radius:10px;font-weight:900;font-size:16px;cursor:pointer;background:linear-gradient(135deg,var(--orange),#c2410c);color:white;font-family:var(--font-d)">▶ Iniciar ${breakLabel==="⏸ Medio tiempo"?"Medio tiempo":"descanso"} (${Math.floor(breakSec/60)} min)</button>
   </div>`;
   document.body.appendChild(el);
 }
+
+// ── Helpers de tiempos muertos ──────────────────────────
+function _tmCounts(live){
+  const q=live.q||1;
+  const to=live.timeouts||{our:[0,0,0,0,0,0],rival:[0,0,0,0,0,0]};
+  const nQ=live.q||4; // usamos q para detectar mitad
+  const isH1=q<=2,isH2=q===3||q===4;
+  const ourUsed=isH1?(to.our[0]||0)+(to.our[1]||0):isH2?(to.our[2]||0)+(to.our[3]||0):0;
+  const rivUsed=isH1?(to.rival[0]||0)+(to.rival[1]||0):isH2?(to.rival[2]||0)+(to.rival[3]||0):0;
+  const limit=isH1?2:isH2?3:1;
+  return{ourUsed,rivUsed,ourRem:Math.max(0,limit-ourUsed),rivRem:Math.max(0,limit-rivUsed),limit,isH1,isH2};
+}
+function _tmDots(used,limit){
+  // ● = usado, ○ = disponible
+  return"●".repeat(used)+"○".repeat(Math.max(0,limit-used));
+}
+
+let _tmTimer=null,_tmSec=0;
+
+function openTimeoutModal(){
+  document.getElementById("m-tm-pick")?.remove();
+  const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
+  const t=S.teams.find(x=>x.id===S.teamId);
+  const{ourRem,rivRem,ourUsed,rivUsed,limit,isH1,isH2}=_tmCounts(m.live);
+  const half=isH1?"1ª mitad":isH2?"2ª mitad":"Prórroga";
+  const el=document.createElement("div");el.id="m-tm-pick";
+  el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.78);z-index:9999;display:flex;align-items:flex-end;justify-content:center;";
+  el.onclick=e=>{if(e.target===el)el.remove();};
+  el.innerHTML=`<div class="modal" style="padding:16px">
+    <div class="mhandle"></div>
+    <div style="font-weight:900;font-size:17px;margin-bottom:2px">⏱ Tiempo Muerto</div>
+    <div style="font-size:12px;color:var(--td);margin-bottom:14px">¿Qué equipo pide el T.M.? · <b>${half}</b></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <button onclick="addTimeout('our')" style="padding:14px 8px;border-radius:11px;border:1px solid ${ourRem>0?"rgba(249,115,22,.5)":"rgba(239,68,68,.3)"};background:${ourRem>0?"rgba(249,115,22,.1)":"rgba(239,68,68,.06)"};cursor:${ourRem>0?"pointer":"not-allowed"};color:var(--tx)" ${ourRem<=0?"disabled":""}>
+        <div style="font-size:11px;font-weight:800;letter-spacing:1px;color:var(--orange);margin-bottom:4px">NUESTRO</div>
+        <div style="font-weight:900;font-size:13px;margin-bottom:6px">${esc((t?.name||"").split(" ").slice(0,2).join(" "))}</div>
+        <div style="font-size:18px;letter-spacing:3px;color:${ourRem>0?"var(--orange)":"#ef4444"}">${_tmDots(ourUsed,limit)}</div>
+        <div style="font-size:11px;margin-top:4px;color:${ourRem>0?"var(--td)":"#ef4444"};font-weight:700">${ourRem>0?ourRem+" restante"+(ourRem!==1?"s":""):"⛔ Agotados"}</div>
+      </button>
+      <button onclick="addTimeout('rival')" style="padding:14px 8px;border-radius:11px;border:1px solid ${rivRem>0?"rgba(100,150,255,.4)":"rgba(239,68,68,.3)"};background:${rivRem>0?"rgba(100,150,255,.07)":"rgba(239,68,68,.06)"};cursor:${rivRem>0?"pointer":"not-allowed"};color:var(--tx)" ${rivRem<=0?"disabled":""}>
+        <div style="font-size:11px;font-weight:800;letter-spacing:1px;color:#6495ed;margin-bottom:4px">RIVAL</div>
+        <div style="font-weight:900;font-size:13px;margin-bottom:6px">${esc((m.rival||"Rival").split(" ").slice(0,2).join(" "))}</div>
+        <div style="font-size:18px;letter-spacing:3px;color:${rivRem>0?"#6495ed":"#ef4444"}">${_tmDots(rivUsed,limit)}</div>
+        <div style="font-size:11px;margin-top:4px;color:${rivRem>0?"var(--td)":"#ef4444"};font-weight:700">${rivRem>0?rivRem+" restante"+(rivRem!==1?"s":""):"⛔ Agotados"}</div>
+      </button>
+    </div>
+    <button onclick="document.getElementById('m-tm-pick').remove()" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--s2);color:var(--td);cursor:pointer;font-weight:700">Cancelar</button>
+  </div>`;
+  document.body.appendChild(el);
+}
+
 function addTimeout(team){
+  document.getElementById("m-tm-pick")?.remove();
   const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
   const qi=(m.live.q||1)-1;
   const q=m.live.q||1;
-  // Init structure
   if(!m.live.timeouts||Array.isArray(m.live.timeouts))
     m.live.timeouts={our:[0,0,0,0,0,0],rival:[0,0,0,0,0,0]};
   const to=m.live.timeouts;
-  // Check limit: 2 in Q1+Q2, 3 in Q3+Q4
-  const isH1=q<=2, isH2=q===3||q===4;
+  const isH1=q<=2,isH2=q===3||q===4;
+  const limit=isH1?2:isH2?3:1;
   if(team==="our"){
-    const used=isH1?(to.our[0]||0)+(to.our[1]||0):isH2?(to.our[2]||0)+(to.our[3]||0):0;
-    const limit=isH1?2:isH2?3:99;
+    const used=isH1?(to.our[0]||0)+(to.our[1]||0):isH2?(to.our[2]||0)+(to.our[3]||0):(to.our[qi]||0);
     if(used>=limit){toast("⛔ Tiempos muertos agotados en esta mitad");return;}
     to.our[qi]=(to.our[qi]||0)+1;
   } else {
-    const used=isH1?(to.rival[0]||0)+(to.rival[1]||0):isH2?(to.rival[2]||0)+(to.rival[3]||0):0;
-    const limit=isH1?2:isH2?3:99;
+    const used=isH1?(to.rival[0]||0)+(to.rival[1]||0):isH2?(to.rival[2]||0)+(to.rival[3]||0):(to.rival[qi]||0);
     if(used>=limit){toast("⛔ T.M. del rival agotados en esta mitad");return;}
     to.rival[qi]=(to.rival[qi]||0)+1;
   }
+  // Para el reloj
+  if(m.live.clockRunning){m.live.clockRunning=false;clearInterval(_liveTimer);_liveTimer=null;}
   const t=S.teams.find(x=>x.id===S.teamId);
   const who=team==="our"?(t?.name||"Nuestro equipo"):(m.rival||"Rival");
-  const entry={pid:team==="our"?"team":"rival-to",action:"timeout",pts:0,q:m.live.q,clockAt:m.live.clockSec,desc:"T.M. — "+who};
-  m.live.log=[...(m.live.log||[]),entry];
-  // Parar el reloj y arrancar el minuto de T.M.
-  m.live.clockRunning=false;
-  clearInterval(_liveTimer);_liveTimer=null;
+  m.live.log=[...(m.live.log||[]),{pid:team==="our"?"team":"rival-to",action:"timeout",pts:0,q:m.live.q,clockAt:m.live.clockSec,desc:"T.M. — "+who}];
   save();render();
-  _startTimeoutTimer(who);
+  _startTmOverlay(team,who);
 }
-let _tmTimer=null;
-function _startTimeoutTimer(teamName){
-  document.getElementById("tm-overlay")?.remove();
-  if(_tmTimer){clearInterval(_tmTimer);_tmTimer=null;}
-  let sec=60;
-  const el=document.createElement("div");
-  el.id="tm-overlay";
-  el.style.cssText="position:fixed;bottom:84px;left:50%;transform:translateX(-50%);z-index:9995;width:calc(100% - 32px);max-width:398px;";
-  function _tmRender(){
-    el.innerHTML=`<div style="background:linear-gradient(135deg,rgba(13,34,68,.97),rgba(7,15,30,.97));border:2px solid rgba(245,158,11,.55);border-radius:14px;padding:12px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.7)">
-      <div style="width:52px;height:52px;border-radius:10px;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.4);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0">
-        <span id="tm-overlay-count" style="font-family:var(--font-d);font-weight:900;font-size:26px;color:#f59e0b;line-height:1">${sec}</span>
-        <span style="font-size:8px;color:var(--td);font-weight:700;letter-spacing:.5px">SEG</span>
-      </div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:9px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#f59e0b;margin-bottom:2px">⏱ TIEMPO MUERTO</div>
-        <div style="font-weight:800;font-size:14px;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(teamName)}</div>
-      </div>
-      <button onclick="clearInterval(_tmTimer);_tmTimer=null;document.getElementById('tm-overlay')?.remove();_clockAlert('▶ ¡Reanudamos!',1500)" style="background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.4);border-radius:8px;padding:8px 14px;color:#f59e0b;font-weight:800;font-size:13px;cursor:pointer;flex-shrink:0">▶ Reanudar</button>
-    </div>`;
-  }
-  _tmRender();
-  document.body.appendChild(el);
+
+function _startTmOverlay(team,who){
+  if(_tmTimer)clearInterval(_tmTimer);
+  _tmSec=60;
+  _buildTmOverlay(team,who);
   _tmTimer=setInterval(()=>{
-    sec--;
-    const cnt=document.getElementById("tm-overlay-count");
-    if(cnt)cnt.textContent=sec;
-    if(sec<=0){
+    _tmSec--;
+    const mm=Math.floor(_tmSec/60),ss=_tmSec%60;
+    const el=document.getElementById("tm-count");
+    if(el)el.textContent=mm+":"+(ss<10?"0":"")+ss;
+    if(_tmSec<=0){
       clearInterval(_tmTimer);_tmTimer=null;
-      el.remove();
-      _clockAlert("▶ ¡Fin del T.M.! Reanudamos",2000);
+      document.getElementById("m-tm-overlay")?.remove();
+      _clockAlert("▶ ¡Reanudar!",1800);
     }
   },1000);
+}
+
+function _buildTmOverlay(team,who){
+  document.getElementById("m-tm-overlay")?.remove();
+  const m=mById(S.teamId,S.matchId);if(!m?.live)return;
+  const live=m.live;
+  const t=S.teams.find(x=>x.id===S.teamId);
+  const players=pl(S.teamId);
+  const onCourt=live.onCourt||[];
+  const convIds=live.convocados||m.convocados||[];
+  const allConv=convIds.length>0?players.filter(p=>convIds.includes(p.id)):players;
+  const courtPlayers=onCourt.map(id=>allConv.find(p=>p.id===id)).filter(Boolean);
+  const benchPlayers=allConv.filter(p=>!onCourt.includes(p.id));
+  const{ourUsed,rivUsed,ourRem,rivRem,limit}=_tmCounts(live);
+  const tName=(t?.name||"Nuestro").split(" ").slice(0,2).join(" ");
+  const rName=(m.rival||"Rival").split(" ").slice(0,2).join(" ");
+  const isOur=team==="our";
+
+  // Generar chips del quinteto
+  function courtChips(){
+    return courtPlayers.map(p=>`
+      <div onclick="_tmPickOut('${p.id}')" id="tm-p-${p.id}" style="display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:9px;border:1px solid var(--border);background:var(--s2);cursor:pointer;transition:background .15s">
+        <div style="width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,${t?.color||"#F06318"},${t?.color||"#F06318"}88);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:white;flex-shrink:0">${p.number||"?"}</div>
+        <span style="font-size:13px;font-weight:600;flex:1">${esc((p.name||"").split(" ")[0])}</span>
+        <span style="font-size:10px;color:var(--td)">↔</span>
+      </div>`).join("");
+  }
+  function benchChips(){
+    if(!benchPlayers.length)return`<div style="font-size:12px;color:var(--tm);padding:6px 0">Sin jugadores en banquillo</div>`;
+    return benchPlayers.map(p=>`
+      <div id="tm-b-${p.id}" style="display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:9px;border:1px solid var(--border);background:var(--s);cursor:pointer" onclick="_tmPickIn('${p.id}')">
+        <div style="width:28px;height:28px;border-radius:7px;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--td)">${p.number||"?"}</div>
+        <span style="font-size:13px;color:var(--td);flex:1">${esc((p.name||"").split(" ")[0])}</span>
+        <span style="font-size:10px;color:var(--orange)">▶</span>
+      </div>`).join("");
+  }
+
+  const el=document.createElement("div");
+  el.id="m-tm-overlay";
+  el.dataset.team=team;
+  el.dataset.who=who;
+  el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(7,15,30,.97);z-index:9995;display:flex;flex-direction:column;align-items:center;overflow-y:auto;padding:16px 0 20px";
+  el.innerHTML=`
+  <div style="width:100%;max-width:380px;padding:0 16px">
+    <!-- Header -->
+    <div style="text-align:center;margin-bottom:12px;padding-top:8px">
+      <div style="font-size:11px;font-weight:800;letter-spacing:2px;color:${isOur?"var(--orange)":"#6495ed"};text-transform:uppercase;margin-bottom:4px">⏱ Tiempo Muerto · ${esc(who)}</div>
+      <div id="tm-count" style="font-family:var(--font-d);font-weight:900;font-size:72px;color:var(--tx);line-height:1">1:00</div>
+    </div>
+    <!-- TMs restantes -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+      <div style="background:var(--s2);border:1px solid ${isOur?"rgba(249,115,22,.3)":"var(--border)"};border-radius:10px;padding:9px 10px;text-align:center">
+        <div style="font-size:9px;font-weight:800;letter-spacing:1px;color:var(--orange);margin-bottom:3px">NUESTROS</div>
+        <div style="font-size:20px;letter-spacing:2px;color:var(--orange)">${_tmDots(ourUsed,limit)}</div>
+        <div style="font-size:11px;color:var(--td);margin-top:2px;font-weight:700">${ourRem} restante${ourRem!==1?"s":""}</div>
+      </div>
+      <div style="background:var(--s2);border:1px solid ${!isOur?"rgba(100,150,255,.35)":"var(--border)"};border-radius:10px;padding:9px 10px;text-align:center">
+        <div style="font-size:9px;font-weight:800;letter-spacing:1px;color:#6495ed;margin-bottom:3px">${esc(rName.toUpperCase())}</div>
+        <div style="font-size:20px;letter-spacing:2px;color:#6495ed">${_tmDots(rivUsed,limit)}</div>
+        <div style="font-size:11px;color:var(--td);margin-top:2px;font-weight:700">${rivRem} restante${rivRem!==1?"s":""}</div>
+      </div>
+    </div>
+    <!-- Quinteto en pista -->
+    <div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--td);margin-bottom:7px">En pista — toca para cambiar</div>
+    <div id="tm-court" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">${courtChips()}</div>
+    <!-- Panel de cambio (oculto hasta que se toca) -->
+    <div id="tm-sub-panel" style="display:none;background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.3);border-radius:10px;padding:10px;margin-bottom:10px">
+      <div style="font-size:11px;color:var(--orange);font-weight:800;margin-bottom:7px">¿Quién entra?</div>
+      <div id="tm-bench" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">${benchChips()}</div>
+      <button onclick="_tmCancelSub()" style="width:100%;margin-top:8px;padding:6px;border-radius:7px;border:1px solid var(--border);background:var(--s2);color:var(--td);font-size:12px;cursor:pointer;font-weight:700">Cancelar cambio</button>
+    </div>
+    <!-- Botón reanudar -->
+    <button onclick="_resumeFromTm()" style="width:100%;padding:14px;border:none;border-radius:10px;font-weight:900;font-size:16px;cursor:pointer;background:linear-gradient(135deg,var(--orange),#c2410c);color:white;font-family:var(--font-d);margin-top:4px">▶ Reanudar partido</button>
+  </div>`;
+  document.body.appendChild(el);
+}
+
+let _tmOutPid=null;
+function _tmPickOut(pid){
+  _tmOutPid=pid;
+  // Resaltar el jugador seleccionado como "sale"
+  document.querySelectorAll("[id^='tm-p-']").forEach(el=>{
+    el.style.background=el.id==="tm-p-"+pid?"rgba(239,68,68,.18)":"var(--s2)";
+    el.style.borderColor=el.id==="tm-p-"+pid?"rgba(239,68,68,.5)":"var(--border)";
+  });
+  // Mostrar banquillo
+  document.getElementById("tm-sub-panel").style.display="block";
+}
+function _tmPickIn(inPid){
+  if(!_tmOutPid)return;
+  const m=mById(S.teamId,S.matchId);if(!m?.live)return;
+  // Hacer la sustitución en memoria
+  m.live.onCourt=m.live.onCourt.map(id=>id===_tmOutPid?inPid:id);
+  m.live.selPid=null;
+  save();
+  // Registrar en el log
+  const players=pl(S.teamId);
+  const pIn=players.find(p=>p.id===inPid);
+  const pOut=players.find(p=>p.id===_tmOutPid);
+  const desc="↔ "+(pIn?.name||"?").split(" ")[0]+" ← "+(pOut?.name||"?").split(" ")[0];
+  m.live.log.push({pid:inPid,action:"sub",pts:0,q:m.live.q,clockAt:m.live.clockSec,desc});
+  save();
+  _tmOutPid=null;
+  // Reconstruir overlay con el nuevo quinteto
+  const team=document.getElementById("m-tm-overlay")?.dataset.team||"our";
+  const who=document.getElementById("m-tm-overlay")?.dataset.who||"";
+  _buildTmOverlay(team,who);
+  toast("↔ "+desc);
+}
+function _tmCancelSub(){
+  _tmOutPid=null;
+  document.querySelectorAll("[id^='tm-p-']").forEach(el=>{
+    el.style.background="var(--s2)";el.style.borderColor="var(--border)";
+  });
+  document.getElementById("tm-sub-panel").style.display="none";
+}
+function _resumeFromTm(){
+  clearInterval(_tmTimer);_tmTimer=null;
+  document.getElementById("m-tm-overlay")?.remove();
+  _clockAlert("▶ ¡A jugar!",1500);
 }
 const DAYSF=["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
 const CATEGORIES=["Escuela","Benjamín","Alevín","Infantil","Cadete","Junior","Senior","3x3","Otro"];
@@ -670,7 +889,7 @@ const DEFAULT_CFG={riskThreshold:75,features:{teamScore:false,playerScore:false,
 /* ═══════════════════════════════════════
    STATE
 ═══════════════════════════════════════ */
-let S={screen:"hoy",teamId:null,date:td(),teams:[],players:{},sessions:{},matches:{},events:{},sf:"all",histMonth:null,clubLogo:null,clubName:"Kortline",clubAbrev:"",clubLema:"",cfg:{...DEFAULT_CFG},statsView:"table",matchId:null,eventId:null};
+let S={screen:"hoy",teamId:null,date:td(),teams:[],players:{},sessions:{},matches:{},events:{},sf:"all",histMonth:null,clubLogo:null,clubName:"Kortline",clubAbrev:"",clubLema:"",cfg:{...DEFAULT_CFG},statsView:"table",matchId:null,eventId:null,navStack:[]};
 let shareOpen={parents:true,internal:false};
 
 /* ═══════════════════════════════════════
@@ -718,7 +937,7 @@ function autoBackup(){
 
 function exportBackup(){
   const filename=`kortline-backup-${td()}.json`;
-  const data={version:"1.4",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
+  const data={version:"1.5.1",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
   const json=JSON.stringify(data,null,2);
   const blob=new Blob([json],{type:"application/json"});
   // Descarga directa
@@ -1114,6 +1333,37 @@ function render(){
 }
 
 /* ── helpers ── */
+// Navegación con pila — guarda estado actual y avanza
+function navTo(screen,opts={}){
+  S.navStack=[...(S.navStack||[]).slice(-20),{
+    screen:S.screen,teamId:S.teamId,matchId:S.matchId,
+    date:S.date,eventId:S.eventId,histMonth:S.histMonth,
+    statsView:S.statsView,sf:S.sf
+  }];
+  Object.assign(S,opts);
+  S.screen=screen;
+  render();
+}
+// Volver atrás desapilando — siempre va al sitio exacto de donde vienes
+function navBack(){
+  const stack=S.navStack||[];
+  if(!stack.length){
+    // Fallback sensato según pantalla actual
+    const fallbacks={att:'team',stats:'team',hist:'team',share:'att',
+      matchList:'team',matchDetail:'matchList',liveGame:'matchDetail',
+      eventos:'team'};
+    S.screen=fallbacks[S.screen]||'hoy';
+    render();return;
+  }
+  const prev=stack[stack.length-1];
+  S.navStack=stack.slice(0,-1);
+  S.screen=prev.screen;S.teamId=prev.teamId;S.matchId=prev.matchId;
+  S.date=prev.date;S.eventId=prev.eventId;S.histMonth=prev.histMonth;
+  S.statsView=prev.statsView;S.sf=prev.sf;
+  render();
+}
+// Navegación raíz (navbar) — limpia la pila
+function navRoot(screen){S.navStack=[];S.screen=screen;render();}
 function logoHtml(size=42,r=10){if(S.clubLogo)return`<div style="width:${size}px;height:${size}px;border-radius:${r}px;overflow:hidden;flex-shrink:0;background:var(--s2);border:1px solid var(--border)"><img src="${S.clubLogo}" style="width:100%;height:100%;object-fit:cover"/></div>`;return`<div style="width:${size}px;height:${size}px;border-radius:${r}px;overflow:hidden;flex-shrink:0"><img src="${_ICON_SVG_URL}" style="width:100%;height:100%;display:block"/></div>`;}
 function scheduleChips(sc){if(!sc||!Object.keys(sc).length)return`<span style="font-size:12px;color:var(--tm)">Sin días</span>`;return Object.entries(sc).sort((a,b)=>+a[0]-+b[0]).map(([i,t])=>`<span class="schedule-chip">${DAYS[i]}${t?" · "+t:""}</span>`).join("");}
 function toggleHtml(key,title,desc){const on=S.cfg.features[key];return`<div class="toggle-row"><div class="toggle-info"><div class="toggle-title">${title}</div><div class="toggle-desc">${desc}</div></div><button class="tswitch ${on?"on":""}" onclick="toggleFeat('${key}')"></button></div>`;}
@@ -1220,9 +1470,9 @@ function navBar(){
   const onEq=sc==="equipos"||sc==="team"||sc==="hist"||sc==="matchList"||sc==="matchDetail"||sc==="liveGame"||sc==="eventos";
   const onStats=sc==="stats"||sc==="statsHome";
   return`<nav class="nav">
-    <button class="nb ${onHoy?"on":""}" onclick="S.screen='hoy';render()"><span class="ni">🏠</span><span>Hoy</span></button>
-    <button class="nb ${onEq?"on":""}" onclick="S.screen='equipos';render()"><span class="ni">👥</span><span>Equipos</span></button>
-    <button class="nb ${onStats?"on":""}" onclick="S.screen='statsHome';render()"><span class="ni">📊</span><span>Stats</span></button>
+    <button class="nb ${onHoy?"on":""}" onclick="navRoot('hoy')"><span class="ni">🏠</span><span>Hoy</span></button>
+    <button class="nb ${onEq?"on":""}" onclick="navRoot('equipos')"><span class="ni">👥</span><span>Equipos</span></button>
+    <button class="nb ${onStats?"on":""}" onclick="navRoot('statsHome')"><span class="ni">📊</span><span>Stats</span></button>
   </nav>`;
 }
 
@@ -1284,8 +1534,8 @@ function hoy(){
           </div>
         </div>`:""}
         <div style="display:flex;gap:8px">
-          <button onclick="S.teamId='${t.id}';S.matchId='${m.id}';S.screen='liveGame';render()" style="flex:1;padding:11px;border-radius:9px;border:none;font-weight:800;font-size:14px;cursor:pointer;background:${inProgress?"linear-gradient(135deg,#ef4444,#b91c1c)":"linear-gradient(135deg,var(--orange),var(--orange2))"};color:white">${inProgress?"🔴 Continuar partido":"▶ Empezar partido"}</button>
-          <button onclick="S.teamId='${t.id}';S.matchId='${m.id}';S.screen='matchDetail';render()" style="width:46px;height:46px;border-radius:9px;background:var(--s2);border:1px solid var(--border);cursor:pointer;font-size:18px">📋</button>
+          <button onclick="navTo('liveGame',{teamId:'${t.id}',matchId:'${m.id}'})" style="flex:1;padding:11px;border-radius:9px;border:none;font-weight:800;font-size:14px;cursor:pointer;background:${inProgress?"linear-gradient(135deg,#ef4444,#b91c1c)":"linear-gradient(135deg,var(--orange),var(--orange2))"};color:white">${inProgress?"🔴 Continuar partido":"▶ Empezar partido"}</button>
+          <button onclick="S.teamId='${t.id}';navTo('matchDetail',{matchId:'${m.id}'})" style="width:46px;height:46px;border-radius:9px;background:var(--s2);border:1px solid var(--border);cursor:pointer;font-size:18px">📋</button>
           ${inProgress?`<button onclick="confirmFinishMatch('${t.id}','${m.id}')" style="width:46px;height:46px;border-radius:9px;background:rgba(107,114,128,.15);border:1px solid #6b728055;cursor:pointer;font-size:18px" title="Finalizar partido">🏁</button>`:""}
         </div>
       </div>
@@ -1325,8 +1575,8 @@ function hoy(){
           ${[["✓",pr,"#22c55e","Pres"],["✗",ab,"#ef4444","Aus"],["⏱",la,"#f59e0b","Tard"],["◎",ex,"#6b7280","Just"]].map(([ic,v,col,l])=>`<div style="flex:1;background:var(--s2);border-radius:8px;padding:8px;text-align:center"><div style="font-weight:900;font-size:16px;color:${col}">${v}</div><div style="font-size:10px;color:var(--td)">${l}</div></div>`).join("")}
         </div>`:""}
         <div style="display:flex;gap:8px">
-          <button onclick="S.teamId='${t.id}';S.date=td();S.prevScreen='hoy';S.screen='att';render()" style="flex:1;padding:11px;border-radius:9px;border:none;font-weight:800;font-size:14px;cursor:pointer;background:${done?"var(--s2)":"linear-gradient(135deg,var(--orange),var(--orange2))"};color:${done?"var(--td)":"white"}">${done?"✏️ Editar lista":"📋 Pasar lista"}</button>
-          ${done?`<button onclick="S.teamId='${t.id}';S.date=td();S.screen='share';render()" style="width:46px;height:46px;border-radius:9px;background:linear-gradient(135deg,#25d366,#128c7e);border:none;cursor:pointer;font-size:20px">📤</button>`:""}
+          <button onclick="navTo('att',{teamId:'${t.id}',date:td()})" style="flex:1;padding:11px;border-radius:9px;border:none;font-weight:800;font-size:14px;cursor:pointer;background:${done?"var(--s2)":"linear-gradient(135deg,var(--orange),var(--orange2))"};color:${done?"var(--td)":"white"}">${done?"✏️ Editar lista":"📋 Pasar lista"}</button>
+          ${done?`<button onclick="S.teamId='${t.id}';navTo('share',{date:td()})" style="width:46px;height:46px;border-radius:9px;background:linear-gradient(135deg,#25d366,#128c7e);border:none;cursor:pointer;font-size:20px">📤</button>`:""}
         </div>
       </div>
     </div>`;
@@ -1388,9 +1638,9 @@ function att(){
   const exercisesHtml=f.exercises?`<div class="fg"><label class="fl">📋 Ejercicios del entrenamiento</label><textarea class="fi" id="att-exercises" rows="3" style="resize:none">${esc(sess._exercises||"")}</textarea></div>`:"";
   const teamScoreHtml=f.teamScore?`<div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px"><div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--td);margin-bottom:8px">⭐ Valoración colectiva</div><div class="stars">${[1,2,3,4,5,6,7,8,9,10].map(i=>`<span onclick="setTeamScore(${i})" style="font-size:22px;cursor:pointer;color:${i<=ts?"#f59e0b":"#2a4060"}">★</span>`).join("")}</div>${ts>0?`<div style="font-size:12px;color:var(--td);margin-top:6px">${["","Muy mal","Mal","Regular","Regular","Normal","Normal","Bien","Bien","Muy bien","Excelente"][ts]} (${ts}/10)</div>`:""}</div>`:"";
   return`<header class="header"><div class="hrow">
-    <button class="bbtn" onclick="S.screen=S.prevScreen||'team';render()">←</button>
+    <button class="bbtn" onclick="navBack()">←</button>
     <div style="flex:1"><div style="font-family:var(--font-d);font-weight:900;font-size:18px">Pase de Lista</div><div style="font-size:11px;color:var(--orange)">${esc(t?.name||"")}</div></div>
-    <button class="bbtn" onclick="S.screen='share';render()">📤</button>
+    <button class="bbtn" onclick="navTo('share')">📤</button>
   </div></header>
   <div class="content">
     <div class="dsel">
@@ -1428,7 +1678,7 @@ function stats(){
   const view=S.statsView||"table";
 
   if(total===0)return`<header class="header"><div class="hrow">
-    <button class="bbtn" onclick="S.screen='team';render()">←</button>
+    <button class="bbtn" onclick="navBack()">←</button>
     <div style="flex:1"><div style="font-family:var(--font-d);font-weight:900;font-size:18px">📊 Estadísticas</div><div style="font-size:11px;color:var(--orange)">${esc(t?.name||"")}</div></div>
   </div></header>
   <div class="content"><div class="empty"><div style="font-size:48px;margin-bottom:12px;opacity:.4">📊</div><div style="font-size:14px;color:var(--tm)">Sin sesiones aún.<br/>Pasa lista primero.</div></div></div>
@@ -1503,7 +1753,7 @@ function stats(){
   const avgAll=pc(totalPr,total*players.length);
 
   return`<header class="header"><div class="hrow">
-    <button class="bbtn" onclick="S.screen='team';render()">←</button>
+    <button class="bbtn" onclick="navBack()">←</button>
     <div style="flex:1">
       <div style="font-family:var(--font-d);font-weight:900;font-size:18px">📊 Estadísticas</div>
       <div style="font-size:11px;color:var(--orange)">${esc(t?.name||"")} · ${total} entrenos · umbral ${thr}%</div>
@@ -1584,7 +1834,7 @@ function hist(){
       const ts=e.data._teamScore;
       return`<div class="he" style="${i===entries.length-1?"border-bottom:none":""}">
         <div style="display:flex;align-items:center;gap:8px">
-          <div onclick="S.date='${e.date}';S.prevScreen='hist';S.screen='att';render()" style="flex:1;cursor:pointer">
+          <div onclick="S.date='${e.date}';navTo('att')" style="flex:1;cursor:pointer">
             <div style="display:flex;align-items:center;gap:6px"><div style="font-family:var(--font-d);font-weight:700;font-size:16px">${fd(e.date,true)}</div>${ts?`<span style="color:#f59e0b;font-size:12px">${"★".repeat(ts)}</span>`:""}</div>
             ${e.data._exercises?`<div style="font-size:12px;color:var(--td);margin-top:2px">📋 ${esc(e.data._exercises.slice(0,60))}${e.data._exercises.length>60?"…":""}</div>`:""}
             ${e.data._notes?`<div style="font-size:12px;color:var(--tm);margin-top:1px">📝 ${esc(e.data._notes.slice(0,50))}${e.data._notes.length>50?"…":""}</div>`:""}
@@ -1594,15 +1844,15 @@ function hist(){
             <div style="font-family:var(--font-d);color:${c};font-weight:900;font-size:20px">${p2}%</div>
             ${e.data._photo?`<span style="font-size:13px" title="Tiene foto">📷</span>`:""}
           </div>
-          <button onclick="S.date='${e.date}';S.screen='share';render()" style="background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.3);border-radius:7px;padding:6px 9px;cursor:pointer;font-size:16px">📤</button>
+          <button onclick="navTo('share',{date:'${e.date}'})" style="background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.3);border-radius:7px;padding:6px 9px;cursor:pointer;font-size:16px">📤</button>
           <button onclick="openDeleteConfirm('${S.teamId}','${e.date}')" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:7px;padding:6px 9px;cursor:pointer;font-size:16px">🗑</button>
         </div>
       </div>`;
     }).join("")}</div>`;
   return`<header class="header"><div class="hrow">
-    <button class="bbtn" onclick="S.screen='team';render()">←</button>
+    <button class="bbtn" onclick="navBack()">←</button>
     <div style="flex:1"><div style="font-family:var(--font-d);font-weight:900;font-size:18px">📋 Historial</div><div style="font-size:11px;color:var(--orange)">${esc(t?.name||"")} · ${allEntries.length} sesiones</div></div>
-    <button class="bbtn" onclick="S.date=td();S.screen='share';render()">📤</button>
+    <button class="bbtn" onclick="navTo('share',{date:td()})">📤</button>
   </div></header>
   <div class="content">${monthSel}${mStats}${rows}</div>
   ${navBar()}`;
@@ -1643,19 +1893,19 @@ function team(){
     </div>
   </div>`:"";
   return`<header class="header"><div class="hrow">
-    <button class="bbtn" onclick="S.screen='equipos';render()">←</button>
+    <button class="bbtn" onclick="navBack()">←</button>
     <div style="flex:1"><div style="font-family:var(--font-d);font-weight:900;font-size:18px;letter-spacing:.3px">${esc(t.name)}</div><div style="font-size:11px;color:var(--orange)">${esc(t.category||"")}</div></div>
     <button class="bbtn" onclick="openTeamModal(S.teams.find(x=>x.id===S.teamId))">✏️</button>
   </div></header>
   <div class="content">
     ${coaches.length?`<div class="section-card" style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><span style="font-size:20px">👟</span><div><div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--td);margin-bottom:2px">Entrenador${coaches.length>1?"es":""}</div><div style="font-weight:600;font-size:14px">${coaches.map(esc).join(" · ")}</div></div></div>`:""}
     <div class="qg4">
-      <button class="qb ${trainsToday?"hi":""}" onclick="S.screen='att';S.prevScreen='team';S.date=td();render()"><div style="font-size:22px">${trainsToday?"✅":"☑️"}</div><div style="font-size:10px;font-weight:700;margin-top:4px;color:${trainsToday?"var(--orange)":"var(--td)"}">ASISTENCIA${trainsToday?" 🔴":""}</div>${trainsToday&&t.schedule[ti]?`<div style="font-size:11px;color:var(--orange);margin-top:2px">${t.schedule[ti]}h</div>`:""}</button>
-      <button class="qb" onclick="S.screen='matchList';render()"><div style="font-size:22px">🏟️</div><div style="font-size:10px;font-weight:700;margin-top:4px;color:var(--td)">PARTIDOS</div><div style="font-family:var(--font-d);font-size:14px;color:var(--tm);margin-top:2px">${(S.matches[S.teamId]||[]).length}</div></button>
-      <button class="qb" onclick="S.statsView='table';S.screen='stats';render()"><div style="font-size:22px">📊</div><div style="font-size:10px;font-weight:700;margin-top:4px;color:var(--td)">ESTADÍSTICAS</div></button>
-      <button class="qb" onclick="S.screen='hist';render()"><div style="font-size:22px">📋</div><div style="font-size:10px;font-weight:700;margin-top:4px;color:var(--td)">HISTORIAL</div><div style="font-family:var(--font-d);font-size:14px;color:var(--tm);margin-top:2px">${ts}</div></button>
+      <button class="qb ${trainsToday?"hi":""}" onclick="navTo('att',{date:td()})"><div style="font-size:22px">${trainsToday?"✅":"☑️"}</div><div style="font-size:10px;font-weight:700;margin-top:4px;color:${trainsToday?"var(--orange)":"var(--td)"}">ASISTENCIA${trainsToday?" 🔴":""}</div>${trainsToday&&t.schedule[ti]?`<div style="font-size:11px;color:var(--orange);margin-top:2px">${t.schedule[ti]}h</div>`:""}</button>
+      <button class="qb" onclick="navTo('matchList')"><div style="font-size:22px">🏟️</div><div style="font-size:10px;font-weight:700;margin-top:4px;color:var(--td)">PARTIDOS</div><div style="font-family:var(--font-d);font-size:14px;color:var(--tm);margin-top:2px">${(S.matches[S.teamId]||[]).length}</div></button>
+      <button class="qb" onclick="navTo('stats',{statsView:'table'})"><div style="font-size:22px">📊</div><div style="font-size:10px;font-weight:700;margin-top:4px;color:var(--td)">ESTADÍSTICAS</div></button>
+      <button class="qb" onclick="navTo('hist')"><div style="font-size:22px">📋</div><div style="font-size:10px;font-weight:700;margin-top:4px;color:var(--td)">HISTORIAL</div><div style="font-family:var(--font-d);font-size:14px;color:var(--tm);margin-top:2px">${ts}</div></button>
     </div>
-    <button class="qb" onclick="S.screen='eventos';render()" style="width:100%;border-radius:10px;margin-bottom:12px;padding:12px;display:flex;align-items:center;justify-content:center;gap:10px"><div style="font-size:20px">📅</div><div style="text-align:left"><div style="font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--td)">EVENTOS Y CONVOCATORIAS</div><div style="font-size:11px;color:var(--tm);margin-top:1px">${(S.events[S.teamId]||[]).length} evento${(S.events[S.teamId]||[]).length!==1?"s":""} · Compartir por WhatsApp</div></div><div style="margin-left:auto;color:var(--td);font-size:18px">›</div></button>
+    <button class="qb" onclick="navTo('eventos')" style="width:100%;border-radius:10px;margin-bottom:12px;padding:12px;display:flex;align-items:center;justify-content:center;gap:10px"><div style="font-size:20px">📅</div><div style="text-align:left"><div style="font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--td)">EVENTOS Y CONVOCATORIAS</div><div style="font-size:11px;color:var(--tm);margin-top:1px">${(S.events[S.teamId]||[]).length} evento${(S.events[S.teamId]||[]).length!==1?"s":""} · Compartir por WhatsApp</div></div><div style="margin-left:auto;color:var(--td);font-size:18px">›</div></button>
     ${attBar}
     <div class="card" style="margin-bottom:14px"><div style="padding:4px 14px 8px"><div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--td);padding-top:10px;margin-bottom:4px">📅 Horario</div>${schedRows}</div></div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><div style="font-family:var(--font-d);font-weight:900;font-size:19px">Plantilla <span style="font-weight:400;font-size:14px;color:var(--td)">(${players.length})</span></div><button onclick="openPlayerModal()" style="background:rgba(255,107,26,.15);color:var(--orange);border:1px solid rgba(255,107,26,.3);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px;font-weight:700">＋ Añadir</button></div>
@@ -1733,7 +1983,7 @@ function shareScreen(){
     </div>`;
   }
   return`<header class="header"><div class="hrow">
-    <button class="bbtn" onclick="S.screen='att';render()">←</button>
+    <button class="bbtn" onclick="navBack()">←</button>
     <div style="flex:1"><div style="font-family:var(--font-d);font-weight:900;font-size:18px">📤 Compartir</div><div style="font-size:11px;color:var(--orange)">${esc(t?.name||"")} · ${fd(S.date,true)}</div></div>
   </div></header>
   <div class="content">
@@ -1792,7 +2042,7 @@ function eventos(){
     (upcoming.length>0?`<div style="font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--td);margin-bottom:8px">📌 PRÓXIMOS</div>${upcoming.map(evtCard).join("")}`:"")
     +(past.length>0?`<div style="font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--td);margin:${upcoming.length>0?"16px":"0"} 0 8px">🕐 PASADOS</div>${past.map(evtCard).join("")}`:"");
   return`<header class="header"><div class="hrow">
-    <button class="bbtn" onclick="S.screen='team';render()">←</button>
+    <button class="bbtn" onclick="navBack()">←</button>
     <div style="flex:1"><div style="font-family:var(--font-d);font-weight:900;font-size:18px">📅 Eventos</div><div style="font-size:11px;color:var(--orange)">${esc(t?.name||"")} · ${evts.length} evento${evts.length!==1?"s":""}</div></div>
     <button class="bbtn" onclick="openEventoModal()">＋</button>
   </div></header>
@@ -2036,7 +2286,7 @@ function openClubSettings(){
       <div class="stg-sec-title">ℹ️ Acerca de</div>
       <div style="text-align:center;padding:18px 0 6px">
         <img src="${_FULL_SVG_URL}" style="height:36px;max-width:100%;opacity:0.9;margin-bottom:10px"/>
-        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.4.0 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
+        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.5.6 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
       </div>
     </div>
     <button class="btn-p" onclick="saveClubSettings()">Guardar configuración</button>
@@ -2081,7 +2331,7 @@ function openPlayerModal(init){
   el.onclick=e=>{if(e.target===el)el.remove();};
   el.innerHTML=`<div class="modal">
     <div class="mhandle"></div><div class="mtitle">${init?"Editar Jugador":"Nuevo Jugador"}</div>
-    <div class="frow"><div class="fg" style="flex:2"><label class="fl">Nombre</label><input class="fi" id="${id}-n" value="${esc(init?.name||"")}" placeholder="Nombre Apellido"/></div><div class="fg" style="flex:1"><label class="fl">Dorsal</label><input class="fi" type="number" id="${id}-d" value="${esc(String(init?.number||""))}" placeholder="4" style="text-align:center"/></div></div>
+    <div class="frow"><div class="fg" style="flex:2"><label class="fl">Nombre</label><input class="fi" id="${id}-n" value="${esc(init?.name||"")}" placeholder="Nombre Apellido"/></div><div class="fg" style="flex:1"><label class="fl">Dorsal</label><input class="fi" type="text" inputmode="numeric" pattern="[0-9]*" id="${id}-d" value="${esc(String(init?.number||""))}" placeholder="4" style="text-align:center"/></div></div>
     <div class="fg"><label class="fl">Posición</label><select class="fi" id="${id}-p">${["", ...POSITIONS].map(p=>`<option value="${p}" ${(init?.position||"")==p?"selected":""}>${p||"Sin especificar"}</option>`).join("")}</select></div>
     <div class="fg"><label class="fl">Notas</label><input class="fi" id="${id}-o" value="${esc(init?.notes||"")}" placeholder="Capitán, lesionado..."/></div>
     <button class="btn-p" onclick="savePlayer('${id}','${init?.id||""}')">${init?"Guardar":"Añadir"}</button>
@@ -2144,8 +2394,8 @@ function clearJust(){const k=sk(S.teamId,S.date);const sess={...S.sessions[k]||{
 /* ═══════════════════════════════════════
    ACTIONS
 ═══════════════════════════════════════ */
-function go(sc,tid){S.screen=sc;S.teamId=tid;S.date=td();render();}
-function goAtt(tid){S.teamId=tid;S.date=td();S.prevScreen="hoy";S.screen="att";render();}
+function go(sc,tid){navTo(sc,{teamId:tid,date:td()});}
+function goAtt(tid){navTo("att",{teamId:tid,date:td()});}
 function togCol(el,gid){document.querySelectorAll("#"+gid+" .cdot").forEach(d=>d.classList.remove("s"));el.classList.add("s");}
 function toggleDayTime(cb,tid){const ti=document.getElementById(tid);if(!ti)return;ti.disabled=!cb.checked;if(!cb.checked)ti.value="";}
 function toggleFeat(key){S.cfg.features[key]=!S.cfg.features[key];const btn=document.querySelector(`[onclick="toggleFeat('${key}')"]`);if(btn){btn.classList.toggle("on",S.cfg.features[key]);}}
@@ -2440,7 +2690,7 @@ function matchList(){
       const cls=r==="W"?"win":r==="L"?"loss":r==="D"?"draw":"pending";
       const locLabel=m.location==="home"?"🏠":m.location==="away"?"✈️":"⚖️";
       const convCnt=(m.convocados||[]).length;
-      return`<div class="match-card ${cls}" onclick="S.matchId='${m.id}';S.screen='matchDetail';render()">
+      return`<div class="match-card ${cls}" onclick="navTo('matchDetail',{matchId:'${m.id}'})">
         <div style="padding:12px 14px">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
             <div style="flex:1">
@@ -2458,7 +2708,7 @@ function matchList(){
     }).join("");
 
   return`<header class="header"><div class="hrow">
-    <button class="bbtn" onclick="S.screen='team';render()">←</button>
+    <button class="bbtn" onclick="navBack()">←</button>
     <div style="flex:1"><div style="font-family:var(--font-d);font-weight:900;font-size:18px">🏟️ Partidos</div><div style="font-size:11px;color:var(--orange)">${esc(t.name)} · ${matches.length} partidos</div></div>
     <button class="bbtn" onclick="openMatchModal()">＋</button>
   </div></header>
@@ -2501,18 +2751,26 @@ function matchDetail(){
   </div>`;
 
   // Quarters input — grid dinámico que se ajusta al número de columnas
-  const quartersHtml=`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px">
+  const quartersHtml=`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:8px">
     ${qlabels.map((ql,qi)=>{
       const hi=qi*2,ai=qi*2+1;
       const hv=q[hi]!==null&&q[hi]!==undefined?q[hi]:"";
       const av=q[ai]!==null&&q[ai]!==undefined?q[ai]:"";
       const isOT=qi>=nQuarters;
-      return`<div style="background:var(--s2);border:1px solid ${isOT?"rgba(245,158,11,.4)":"var(--border)"};border-radius:8px;padding:6px 4px;text-align:center;position:relative">
+      return`<div style="background:var(--s2);border:1px solid ${isOT?"rgba(245,158,11,.4)":"var(--border)"};border-radius:8px;padding:5px 2px;text-align:center;position:relative">
         ${isOT&&qi===qlabels.length-1?`<button onclick="removeLastOT()" style="position:absolute;top:2px;right:2px;background:none;border:none;color:var(--tm);cursor:pointer;font-size:10px;line-height:1;padding:1px 3px" title="Quitar">✕</button>`:""}
         <div style="font-size:10px;font-weight:700;color:${isOT?"#f59e0b":"var(--td)"};margin-bottom:5px">${ql}</div>
-        <input class="q-input" type="number" min="0" max="99" placeholder="—" value="${hv}" oninput="updateQ(${hi},this.value)" onblur="autoSaveQ()" style="margin-bottom:4px"/>
+        <div class="q-stepper" style="margin-bottom:4px">
+          <button class="q-stepper-btn" onclick="_qStep(${hi},-1)">−</button>
+          <span class="q-stepper-val" id="qv-${hi}" onclick="_qInlineEdit(${hi})" title="Toca para editar" style="cursor:pointer">${hv!==""?hv:"—"}</span>
+          <button class="q-stepper-btn" onclick="_qStep(${hi},1)">+</button>
+        </div>
         <div style="font-size:9px;color:var(--tm);margin:2px 0">vs</div>
-        <input class="q-input" type="number" min="0" max="99" placeholder="—" value="${av}" oninput="updateQ(${ai},this.value)" onblur="autoSaveQ()"/>
+        <div class="q-stepper">
+          <button class="q-stepper-btn" onclick="_qStep(${ai},-1)">−</button>
+          <span class="q-stepper-val" id="qv-${ai}" onclick="_qInlineEdit(${ai})" title="Toca para editar" style="cursor:pointer">${av!==""?av:"—"}</span>
+          <button class="q-stepper-btn" onclick="_qStep(${ai},1)">+</button>
+        </div>
       </div>`;
     }).join("")}
   </div>
@@ -2544,7 +2802,7 @@ function matchDetail(){
   const hasLive=!!(m.live&&(m.live.log||[]).length>0);
 
   return`<header class="header"><div class="hrow">
-    <button class="bbtn" onclick="S.screen='matchList';render()">←</button>
+    <button class="bbtn" onclick="navBack()">←</button>
     <div style="flex:1">
       <div style="font-family:var(--font-d);font-weight:900;font-size:17px">${esc(m.rival||"Rival")}</div>
       <div style="font-size:11px;color:var(--orange)">${m.date?fd(m.date,true):"Sin fecha"} · ${locLabel}</div>
@@ -2554,7 +2812,7 @@ function matchDetail(){
   <div class="content">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
       ${resultBadge}
-      <button onclick="S.screen='liveGame';render()" style="display:inline-flex;align-items:center;gap:5px;padding:5px 13px;border-radius:8px;border:none;background:linear-gradient(135deg,#dc2626,#b91c1c);color:white;font-weight:800;font-size:13px;cursor:pointer">🔴 ${hasLive?"Continuar en vivo":"Seguimiento en vivo"}</button>
+      <button onclick="navTo('liveGame')" style="display:inline-flex;align-items:center;gap:5px;padding:5px 13px;border-radius:8px;border:none;background:linear-gradient(135deg,#dc2626,#b91c1c);color:white;font-weight:800;font-size:13px;cursor:pointer">🔴 ${hasLive?"Continuar en vivo":"Seguimiento en vivo"}</button>
     </div>
     ${scoreboardHtml}
     <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--td);margin-bottom:8px">Marcador por cuartos (Local / Visitante)</div>
@@ -2638,7 +2896,7 @@ function openMatchModal(init){
         </div>
         <div class="fg"><label class="fl">Duración por cuarto</label>
           <div style="display:flex;gap:6px;align-items:center">
-            <input class="fi" type="number" id="${mid}-qmins" min="1" max="30" value="${_defM}" style="width:70px;text-align:center;font-size:18px;font-weight:700;flex-shrink:0"/>
+            <input class="fi" type="text" inputmode="numeric" pattern="[0-9]*" id="${mid}-qmins" min="1" max="30" value="${_defM}" style="width:70px;text-align:center;font-size:18px;font-weight:700;flex-shrink:0"/>
             <span style="font-size:13px;color:var(--td);font-weight:600">min</span>
           </div>
         </div>
@@ -2753,7 +3011,7 @@ function _convSetupHtml(m,t,step){
         </div>`).join("")}
     </div>
     <div class="riv-add-row">
-      <input type="number" id="riv-num" class="fi" placeholder="#" style="width:64px;text-align:center;flex-shrink:0;font-size:16px;font-weight:700" min="0" max="99"/>
+      <input type="text" inputmode="numeric" pattern="[0-9]*" id="riv-num" class="fi" placeholder="#" style="width:64px;text-align:center;flex-shrink:0;font-size:16px;font-weight:700" min="0" max="99"/>
       <input type="text" id="riv-name" class="fi" placeholder="Nombre del jugador" style="flex:1"/>
       <button onclick="_rivAdd()" style="padding:10px 14px;border-radius:8px;border:none;background:rgba(239,68,68,.2);color:#ef4444;font-weight:800;font-size:15px;cursor:pointer;flex-shrink:0">＋</button>
     </div>`;
@@ -2898,6 +3156,40 @@ function saveMatchMeta(mid,eid){
     openConvSetup();
   }
 }
+function _qStep(idx,delta){
+  const m=mById(S.teamId,S.matchId);if(!m)return;
+  if(!m.q)m.q=[null,null,null,null,null,null,null,null,null,null];
+  const cur=m.q[idx]!==null&&m.q[idx]!==undefined?parseInt(m.q[idx])||0:0;
+  const next=Math.max(0,Math.min(99,cur+delta));
+  updateQ(idx,String(next));
+  const el=document.getElementById("qv-"+idx);
+  if(el&&el.tagName==="SPAN")el.textContent=next;
+  save();
+}
+function _qInlineEdit(idx){
+  const span=document.getElementById("qv-"+idx);
+  if(!span||span.tagName!=="SPAN")return;
+  const cur=span.textContent==="—"?"":span.textContent;
+  const inp=document.createElement("input");
+  inp.type="text";inp.inputMode="numeric";inp.pattern="[0-9]*";
+  inp.value=cur;inp.id="qv-"+idx;
+  inp.style.cssText="width:40px;text-align:center;font-family:var(--font-d);font-weight:900;font-size:20px;background:var(--s3);border:1.5px solid var(--orange);border-radius:6px;color:var(--tx);outline:none;padding:2px 0;-webkit-appearance:none;appearance:none;";
+  span.replaceWith(inp);
+  inp.focus();inp.select();
+  let committed=false;
+  const commit=()=>{
+    if(committed)return;committed=true;
+    const v=parseInt(inp.value);
+    const val=isNaN(v)?0:Math.max(0,Math.min(99,v));
+    updateQ(idx,String(val));save();
+    const ns=document.createElement("span");
+    ns.className="q-stepper-val";ns.id="qv-"+idx;ns.textContent=val;
+    ns.onclick=()=>_qInlineEdit(idx);ns.title="Toca para editar";ns.style.cursor="pointer";
+    if(inp.parentNode)inp.replaceWith(ns);
+  };
+  inp.onblur=commit;
+  inp.onkeydown=e=>{if(e.key==="Enter"||e.key==="Tab"){e.preventDefault();commit();}};
+}
 function updateQ(idx,val){
   const m=mById(S.teamId,S.matchId);if(!m)return;
   if(!m.q)m.q=[null,null,null,null,null,null,null,null,null,null];
@@ -2927,15 +3219,13 @@ function updateQ(idx,val){
   }
 }
 function autoSaveQ(){
+  // Los datos ya están en m.q via updateQ/_qStep — solo guardamos
   const m=mById(S.teamId,S.matchId);if(!m)return;
-  const inputs=document.querySelectorAll(".q-input");
-  if(!m.q)m.q=[null,null,null,null,null,null,null,null,null,null];
-  inputs.forEach((inp,i)=>{m.q[i]=inp.value===""?null:parseInt(inp.value)||0;});
   if(m.live){
     const nQ=m.quarters||4;const otCount=m.live.otCount||0;const isAway=m.location==="away";
     if(!m.live.qScores)m.live.qScores=[];
     for(let i=0;i<nQ+otCount;i++){
-      const local=parseInt(m.q[i*2])||0;const visitor=parseInt(m.q[i*2+1])||0;
+      const local=parseInt(m.q?.[i*2])||0;const visitor=parseInt(m.q?.[i*2+1])||0;
       if(!m.live.qScores[i])m.live.qScores[i]=[0,0];
       m.live.qScores[i][0]=isAway?visitor:local;
       m.live.qScores[i][1]=isAway?local:visitor;
@@ -2945,12 +3235,7 @@ function autoSaveQ(){
 }
 function saveMatchScore(){
   const m=mById(S.teamId,S.matchId);if(!m)return;
-  // Read all q-inputs from DOM to ensure sync
-  const inputs=document.querySelectorAll(".q-input");
-  if(!m.q)m.q=[null,null,null,null,null,null,null,null,null,null];
-  inputs.forEach((inp,i)=>{m.q[i]=inp.value===""?null:parseInt(inp.value)||0;});
-  // Si el partido tiene datos de live, sincronizar también live.qScores
-  // para que _syncLiveQ no sobreescriba los scores manuales de OT con [0,0]
+  // Los datos ya están en m.q via _qStep — sincronizar live si existe
   if(m.live){
     const nQ=m.quarters||4;const otCount=m.live.otCount||0;const isAway=m.location==="away";
     if(!m.live.qScores)m.live.qScores=[];
@@ -3322,87 +3607,42 @@ function liveGame(){
   const last=log.length>0?log[log.length-1]:null;
   const undoBtn=last?`<button onclick="undoLiveAction()" style="display:flex;align-items:center;gap:6px;width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--s2);cursor:pointer;color:var(--td);font-size:13px;font-weight:600;margin-bottom:10px">↩️ ${esc(last.desc)}</button>`:"";
 
-  // Log panel — agrupado por cuartos
-  const logPanel=(()=>{
-    const allLog=live.log||[];
-    if(allLog.length===0)return"";
-
-    // Agrupar por cuarto manteniendo índices reales
-    const byQ={};
-    allLog.forEach((e,realIdx)=>{
-      const q=e.q||1;
-      if(!byQ[q])byQ[q]=[];
-      byQ[q].push({e,realIdx});
-    });
-
-    // Cuartos ordenados descendente (actual primero)
-    const sortedQs=Object.keys(byQ).map(Number).sort((a,b)=>b-a);
-
-    const sections=sortedQs.map(q=>{
-      const items=byQ[q];                        // orden original (asc en tiempo)
-      const isCur=q===curQ;
-      const qLabel=qlabels[q-1]||("Q"+q);
-      const uid_q="log-q-"+q;
-
-      // Resumen: pts nuestros y del rival en este cuarto desde el log
-      let ourPts=0,rivPts=0;
-      items.forEach(({e})=>{
-        const isRivPid=!!(m.rivalPlayers||[]).find(p=>p.id===e.pid);
-        if(isRivPid||e.pid==="rival")rivPts+=e.pts||0;
-        else ourPts+=e.pts||0;
-      });
-      const ptsSummary=ourPts>0||rivPts>0
-        ?`<span style="font-size:10px;color:var(--td);margin-left:4px">${ourPts>0?`<span style="color:#22c55e">+${ourPts}</span>`:""}${rivPts>0?`<span style="color:#ef4444"> ${ourPts>0?"/ ":""}-${rivPts}</span>`:""}</span>`
-        :"";
-
-      // Filas — mostrar en orden inverso dentro de cada cuarto (más reciente arriba)
-      const rows=[...items].reverse().map(({e,realIdx},rowI)=>{
-        const isRivPid=!!(m.rivalPlayers||[]).find(p=>p.id===e.pid);
-        const pdata=convP.find(p=>p.id===e.pid);
-        const pname=e.pid==="rival"||e.pid==="rival-to"?"Rival":e.pid==="team"?"Equipo":(pdata?pdata.name.split(" ")[0]:"?");
-        const pnum=e.pid==="rival"||e.pid==="rival-to"?"R":e.pid==="team"?"T":(pdata?.number||"?");
-        const ac=_ACTCOLOR[e.action]||"var(--td)";
-        const al=_ACTLABELS[e.action]||e.action;
-        const clockStr=e.clockAt!=null?_fmtClock(e.clockAt):"";
-        const badgeColor=isRivPid?"#ef4444":t.color;
-        return`<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid var(--border);background:${rowI%2===0?"var(--s2)":"var(--s)"}">
-          <span style="font-size:9px;font-weight:700;color:var(--tm);min-width:30px;line-height:1.3;text-align:right">${clockStr}</span>
-          <div style="width:26px;height:26px;border-radius:6px;background:linear-gradient(135deg,${badgeColor},${badgeColor}88);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:white;flex-shrink:0">${pnum}</div>
-          <div style="flex:1;min-width:0">
-            <div style="font-size:13px;font-weight:600;color:var(--tx)">${esc(pname)}</div>
-            <div style="font-size:11px;font-weight:700;color:${ac};margin-top:1px">${al}${e.pts>0?` <span style="color:${isRivPid?"#ef4444":"#22c55e"};font-size:10px">(+${e.pts})</span>`:""}</div>
-          </div>
-          <button onclick="deleteLogEntry(${realIdx})" style="width:28px;height:28px;border-radius:7px;border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:#ef4444;cursor:pointer;font-size:13px;font-weight:700;flex-shrink:0;display:flex;align-items:center;justify-content:center">✕</button>
-        </div>`;
-      }).join("");
-
-      return`<div style="margin-bottom:4px">
-        <div onclick="var b=document.getElementById('${uid_q}');b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.log-chevron').textContent=b.style.display==='none'?'▶':'▼'"
-          style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:7px 12px;background:${isCur?"rgba(249,115,22,.1)":"var(--s2)"};border:1px solid ${isCur?"rgba(249,115,22,.3)":"var(--border)"};border-radius:${isCur?"9px 9px 0 0":"9px"};user-select:none">
-          <span style="font-family:var(--font-d);font-weight:900;font-size:13px;color:${isCur?"var(--orange)":"var(--td)"};">${qLabel}</span>
-          ${isCur?`<span style="font-size:8px;font-weight:800;background:rgba(249,115,22,.2);color:var(--orange);border-radius:4px;padding:1px 5px;letter-spacing:.5px">EN CURSO</span>`:""}
-          <span style="flex:1"></span>
-          ${ptsSummary}
-          <span style="font-size:10px;background:var(--s3);color:var(--td);border-radius:5px;padding:1px 7px;font-weight:700;margin-left:4px">${items.length}</span>
-          <span class="log-chevron" style="font-size:10px;color:var(--tm);margin-left:2px">${isCur?"▼":"▶"}</span>
-        </div>
-        <div id="${uid_q}" style="display:${isCur?"block":"none"};border:1px solid ${isCur?"rgba(249,115,22,.2)":"var(--border)"};border-top:none;border-radius:0 0 9px 9px;overflow:hidden">
-          ${rows}
-        </div>
-      </div>`;
-    }).join("");
-
-    return`<div style="margin-top:14px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-        <span style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--td)">📋 Historial de acciones</span>
-        <span style="font-size:11px;background:var(--s3);color:var(--td);border-radius:6px;padding:1px 7px;font-weight:700">${allLog.length}</span>
+  // Log panel
+  const logEntries=(live.log||[]).slice().reverse();
+  const qlabelsShort=qlabels;
+  const logPanel=logEntries.length===0?"":`
+    <div style="margin-top:14px">
+      <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px 10px;background:var(--s2);border:1px solid var(--border);border-radius:10px;margin-bottom:0;user-select:none">
+        <span style="font-size:14px">📋</span>
+        <span style="font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--td);flex:1">Historial de acciones</span>
+        <span style="font-size:12px;background:var(--s3);color:var(--td);border-radius:6px;padding:2px 8px;font-weight:700">${logEntries.length}</span>
+        <span style="font-size:11px;color:var(--tm)">▼</span>
       </div>
-      ${sections}
-      <div style="padding:8px 0;text-align:center">
-        <button onclick="_confirm('¿Limpiar el historial de acciones?','🗑 Limpiar',()=>{const m=mById(S.teamId,S.matchId);if(m&&m.live)m.live.log=[];save();render();})" style="font-size:12px;color:var(--tm);background:none;border:none;cursor:pointer">🗑 Limpiar historial</button>
+      <div style="display:none;border:1px solid var(--border);border-top:none;border-radius:0 0 10px 10px;overflow:hidden">
+        ${logEntries.map((e,ri)=>{
+          const realIdx=(live.log||[]).length-1-ri;
+          const pdata=convP.find(p=>p.id===e.pid);
+          const pname=e.pid==="rival"?"Rival":e.pid==="rival-to"?"Rival":e.pid==="team"?"Equipo":(pdata?pdata.name.split(" ")[0]:"?");
+          const pnum=e.pid==="rival"?"R":e.pid==="rival-to"?"R":e.pid==="team"?"T":(pdata?.number||"?");
+          const ac=_ACTCOLOR[e.action]||"var(--td)";
+          const al=_ACTLABELS[e.action]||e.action;
+          const ql=qlabelsShort[(e.q||1)-1]||"Q1";
+          const clockStr=e.clockAt!=null?_fmtClock(e.clockAt):"";
+          return`<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);background:${ri%2===0?"var(--s2)":"var(--s)"}">
+            <span style="font-size:10px;font-weight:800;color:var(--tm);min-width:36px;line-height:1.3">${ql}<br><span style="font-size:9px;color:var(--tm);letter-spacing:.5px">${clockStr}</span></span>
+            <div style="width:26px;height:26px;border-radius:6px;background:linear-gradient(135deg,${t.color},${t.color}88);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:white;flex-shrink:0">${pnum}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:600;color:var(--tx)">${esc(pname)}</div>
+              <div style="font-size:11px;font-weight:700;color:${ac};margin-top:1px">${al}</div>
+            </div>
+            <button onclick="deleteLogEntry(${realIdx})" style="width:30px;height:30px;border-radius:7px;border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:#ef4444;cursor:pointer;font-size:14px;font-weight:700;flex-shrink:0;display:flex;align-items:center;justify-content:center">✕</button>
+          </div>`;
+        }).join("")}
+        <div style="padding:8px 12px;text-align:center">
+          <button onclick="_confirm('¿Limpiar el historial de acciones?','🗑 Limpiar',()=>{const m=mById(S.teamId,S.matchId);if(m&&m.live)m.live.log=[];save();render();})" style="font-size:12px;color:var(--tm);background:none;border:none;cursor:pointer">🗑 Limpiar historial</button>
+        </div>
       </div>
     </div>`;
-  })();
 
   // Stats table
   function totSt(fn){return convP.reduce((s,p)=>s+(fn(live.stats[p.id]||{})||0),0);}
@@ -3684,7 +3924,7 @@ function liveGame(){
     <!-- Stats -->
     ${rivalEnabled?`
     <div style="display:flex;gap:4px;margin-bottom:8px;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:3px">
-      <button onclick="setStatsView('our')" style="flex:1;padding:6px;border-radius:6px;border:none;cursor:pointer;font-size:11px;font-weight:800;background:${(live.statsView||'our')!=='rival'?t.color:'transparent'};color:${(live.statsView||'our')!=='rival'?'white':'var(--td)'}">${esc(t.name.length>14?t.name.slice(0,13)+'…':t.name)}</button>
+      <button onclick="setStatsView('our')" style="flex:1;padding:6px;border-radius:6px;border:none;cursor:pointer;font-size:11px;font-weight:800;background:${(live.statsView||'our')!=='rival'?t.color:'transparent'};color:${(live.statsView||'our')!=='rival'?'white':'var(--td)'}">Nuestro equipo</button>
       <button onclick="setStatsView('rival')" style="flex:1;padding:6px;border-radius:6px;border:none;cursor:pointer;font-size:11px;font-weight:800;background:${live.statsView==='rival'?'#ef4444':'transparent'};color:${live.statsView==='rival'?'white':'var(--td)'}">${esc((m.rival||'Rival').length>14?(m.rival||'Rival').slice(0,13)+'…':m.rival||'Rival')}</button>
     </div>`:""}
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -3706,8 +3946,8 @@ function liveGame(){
 /* ═══════════════════════════════════════
    LIVE GAME ACTIONS
 ═══════════════════════════════════════ */
-const _ACTLABELS={p2m:"+2 Canasta",p3m:"+3 Triple",p1m:"+1 TL",p2a:"Fallo 2pt",p3a:"Fallo 3pt",p1a:"Fallo TL",ro:"Reb. Ofensivo",rd:"Reb. Defensivo",ast:"Asistencia",foul:"Falta",ftech:"Falta Técnica",p2tl:"2 TL Recibidos",stl:"Robo",blk:"Tapón",to:"Pérdida",rival:"Rival +pts",timeout:"Tiempo muerto"};
-const _ACTCOLOR={p2m:"#22c55e",p3m:"#22c55e",p1m:"#22c55e",p2a:"#ef4444",p3a:"#ef4444",p1a:"#ef4444",ro:"#a855f7",rd:"#9ca3af",ast:"#06b6d4",foul:"#f59e0b",ftech:"#ef4444",p2tl:"#22c55e",stl:"#3b82f6",blk:"#8b5cf6",to:"#ef4444",rival:"#ef4444",timeout:"#f59e0b"};
+const _ACTLABELS={p2m:"+2 Canasta",p3m:"+3 Triple",p1m:"+1 TL",p2a:"Fallo 2pt",p3a:"Fallo 3pt",p1a:"Fallo TL",ro:"Reb. Ofensivo",rd:"Reb. Defensivo",ast:"Asistencia",foul:"Falta",ftech:"Falta Técnica",p2tl:"2 TL Recibidos",stl:"Robo",blk:"Tapón",to:"Pérdida",rival:"Rival +pts",timeout:"Tiempo muerto",sub:"Sustitución"};
+const _ACTCOLOR={p2m:"#22c55e",p3m:"#22c55e",p1m:"#22c55e",p2a:"#ef4444",p3a:"#ef4444",p1a:"#ef4444",ro:"#a855f7",rd:"#9ca3af",ast:"#06b6d4",foul:"#f59e0b",ftech:"#ef4444",p2tl:"#22c55e",stl:"#3b82f6",blk:"#8b5cf6",to:"#ef4444",rival:"#ef4444",timeout:"#f59e0b",sub:"#06b6d4"};
 function selectLivePid(pid){
   const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
   m.live.selPid=m.live.selPid===pid?null:pid;
@@ -4157,7 +4397,7 @@ function openRivalPlayerModal(init){
     <div class="mtitle">Jugador Rival</div>
     <div class="frow">
       <div class="fg" style="flex:2"><label class="fl">Nombre</label><input class="fi" id="${mid}-n" value="${esc(init?.name||"")}" placeholder="Nombre Apellido"/></div>
-      <div class="fg" style="flex:1"><label class="fl">Dorsal</label><input class="fi" type="number" id="${mid}-d" value="${esc(String(init?.number||""))}" placeholder="5" style="text-align:center"/></div>
+      <div class="fg" style="flex:1"><label class="fl">Dorsal</label><input class="fi" type="text" inputmode="numeric" pattern="[0-9]*" id="${mid}-d" value="${esc(String(init?.number||""))}" placeholder="5" style="text-align:center"/></div>
     </div>
     <button class="btn-p" onclick="saveRivalPlayer('${mid}','${init?.id||""}')">Añadir</button>
     <button class="btn-s" onclick="document.getElementById('${mid}').remove()">Cancelar</button>
@@ -4287,7 +4527,7 @@ function _syncLiveQ(m){
 function exitLiveGame(){
   const m=mById(S.teamId,S.matchId);
   if(m&&m.live){_syncLiveQ(m);save();}
-  S.screen="matchDetail";render();
+  navBack();
 }
 
 /* ── INIT ── */
@@ -4308,10 +4548,11 @@ function openLandscapeStats(){
   const convP=conv.length>0?players.filter(p=>conv.includes(p.id)):players;
   const onCourt=live.onCourt||[];
   const rivalEnabled=(m.rivalStatsEnabled||(m.rivalPlayers||[]).length>0)&&(m.rivalPlayers||[]).length>0;
+  // Request landscape
   requestLandscape();
 
-  // Totals helpers — each takes its own player list
-  function sumSt(plist, statsObj, fn){return plist.reduce((s,p)=>s+(fn(statsObj[p.id]||{})||0),0);}
+  function totSt(fn){return convP.reduce((s,p)=>s+(fn(live.stats?.[p.id]||{})||0),0);}
+  function totRiv(fn){return (m.rivalPlayers||[]).reduce((s,p)=>s+(fn(live.rivalStats?.[p.id]||{})||0),0);}
 
   function buildTable(plist, statsObj, isRival){
     const accentColor=isRival?"#ef4444":(t?.color||"var(--orange)");
@@ -4334,27 +4575,7 @@ function openLandscapeStats(){
       </tr>`;
     }).join("");
 
-    // ── Fila de totales (usa su propia lista)
-    const s=fn=>sumSt(plist,statsObj,fn);
-    const tPts=s(x=>(x.p1m||0)+(x.p2m||0)*2+(x.p3m||0)*3);
-    const t2m=s(x=>x.p2m||0),t2a2=s(x=>(x.p2m||0)+(x.p2a||0));
-    const t3m=s(x=>x.p3m||0),t3a2=s(x=>(x.p3m||0)+(x.p3a||0));
-    const t1m=s(x=>x.p1m||0),t1a2=s(x=>(x.p1m||0)+(x.p1a||0));
-    const totRow=`<tr class="totrow">
-      <td colspan="2" style="color:var(--td);font-size:9px;font-weight:700;padding:5px 8px;position:sticky;left:0;background:var(--s2)">${isRival?esc((m.rival||"Rival").slice(0,8)):esc((t?.name||"Equipo").split(" ")[0])}</td>
-      <td style="font-family:var(--font-d);font-weight:900;font-size:14px;color:${accentColor}">${tPts}</td>
-      <td style="color:var(--td)">${t2m}/${t2a2}</td>
-      <td style="color:var(--td)">${t3m}/${t3a2}</td>
-      <td style="color:var(--td)">${t1m}/${t1a2}</td>
-      <td style="color:var(--td)">${s(x=>x.ro||0)}</td>
-      <td style="color:var(--td)">${s(x=>x.rd||0)}</td>
-      <td style="color:var(--td)">${s(x=>x.ast||0)}</td>
-      <td style="color:var(--td)">${s(x=>x.foul||0)}</td>
-      <td style="color:var(--td)">${s(x=>x.stl||0)}</td>
-      <td style="color:var(--td)">${s(x=>x.blk||0)}</td>
-      <td style="color:var(--td)">${s(x=>x.to||0)}</td>
-    </tr>`;
-
+    const totPts=totSt?.(s=>(s.p1m||0)+(s.p2m||0)*2+(s.p3m||0)*3)||0;
     return `<div style="overflow-x:auto;border-radius:10px;border:1px solid ${isRival?"rgba(239,68,68,.3)":"var(--border)"}">
       <table class="stats-table" style="font-size:10px">
         <thead><tr style="background:var(--s2)">
@@ -4363,7 +4584,7 @@ function openLandscapeStats(){
           <th style="color:${accentColor}">PTS</th>
           <th>T2</th><th>T3</th><th>TL</th><th>RO</th><th>RD</th><th>AST</th><th>F</th><th>ROB</th><th>TAP</th><th>PER</th>
         </tr></thead>
-        <tbody>${rows}${totRow}</tbody>
+        <tbody>${rows}</tbody>
       </table>
     </div>`;
   }
@@ -4377,44 +4598,23 @@ function openLandscapeStats(){
 
   // Score summary
   const nQ=m.quarters||4;const pL=nQ===4?"Q":"P";const curQ=live.q||1;
-  const otC=live.otCount||0;
-  const otLabels=otC===1?["OT"]:Array.from({length:otC},(_,i)=>"OT"+(i+1));
-  const qlbls=[...[...Array(nQ).keys()].map(i=>pL+(i+1)),...otLabels];
-  const curLabel=qlbls[curQ-1]||pL+curQ;
   const allQS=(live.qScores||[[0,0]]).map(s=>s||[0,0]);
   const totOur=allQS.reduce((a,r)=>a+(r[0]||0),0);
   const totRiv2=allQS.reduce((a,r)=>a+(r[1]||0),0);
-  const diff=totOur-totRiv2;
-  const diffColor=diff>0?"#22c55e":diff<0?"#ef4444":"#f59e0b";
-  const tc=t?.color||"var(--orange)";
-
-  // Per-quarter pills
-  const qPills=allQS.slice(0,nQ+otC).map((qs,i)=>{
-    if(!qs[0]&&!qs[1])return"";
-    const lbl=qlbls[i]||"OT";
-    const win=qs[0]>qs[1],lose=qs[0]<qs[1];
-    return`<span style="font-size:9px;font-weight:700;background:${win?"rgba(34,197,94,.15)":lose?"rgba(239,68,68,.12)":"rgba(245,158,11,.12)"};color:${win?"#22c55e":lose?"#ef4444":"#f59e0b"};border-radius:5px;padding:2px 5px">${lbl} ${qs[0]}–${qs[1]}</span>`;
-  }).filter(Boolean).join(" ");
 
   el.innerHTML=`
-  <div style="background:var(--s);border-bottom:1px solid var(--border);padding:6px max(14px,env(safe-area-inset-right)) 6px max(14px,env(safe-area-inset-left));display:flex;align-items:center;gap:10px;flex-shrink:0">
-    <button onclick="closeLandscapeStats()" style="width:34px;height:34px;border-radius:8px;background:var(--s2);border:1px solid var(--border);color:var(--tx);cursor:pointer;font-size:16px;flex-shrink:0">←</button>
-    <div style="flex:1;min-width:0">
-      <div style="display:flex;align-items:center;gap:8px">
-        <span style="font-family:var(--font-d);font-weight:900;font-size:22px;color:${tc}">${totOur}</span>
-        <span style="font-family:var(--font-d);font-weight:900;font-size:16px;color:var(--tm)">:</span>
-        <span style="font-family:var(--font-d);font-weight:900;font-size:22px;color:var(--tx)">${totRiv2}</span>
-        <span style="font-size:11px;font-weight:800;background:${diffColor}22;color:${diffColor};border:1px solid ${diffColor}44;border-radius:5px;padding:2px 6px">${diff>0?"+"+diff:String(diff)}</span>
-        <span style="font-size:10px;font-weight:700;color:var(--td)">${curLabel}</span>
-      </div>
-      <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:2px">${qPills||`<span style="font-size:10px;color:var(--tm)">${esc(t?.name||"")} vs ${esc(m.rival||"Rival")}</span>`}</div>
+  <div style="background:var(--s);border-bottom:1px solid var(--border);padding:8px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0">
+    <button onclick="closeLandscapeStats()" style="width:36px;height:36px;border-radius:8px;background:var(--s2);border:1px solid var(--border);color:var(--tx);cursor:pointer;font-size:18px;flex-shrink:0">←</button>
+    <div style="flex:1">
+      <div style="font-family:var(--font-d);font-weight:900;font-size:16px">${esc(t?.name||"")} <span style="color:var(--td);font-weight:400">vs</span> ${esc(m.rival||"Rival")}</div>
+      <div style="font-size:11px;color:var(--td)">${pL}${curQ} · ${totOur} – ${totRiv2}</div>
     </div>
-    ${rivalEnabled?`<div style="display:flex;gap:4px;flex-shrink:0">
-      <button id="ls-tab-our" onclick="lsTab('our')" style="padding:4px 10px;border-radius:6px;border:none;font-weight:800;font-size:11px;cursor:pointer;background:${(live.statsView||'our')==='our'?(t?.color||'var(--orange)'):'var(--s2)'};color:${(live.statsView||'our')==='our'?'white':'var(--td)'}">${esc((t?.name||"Nuestro").split(" ")[0])}</button>
-      <button id="ls-tab-riv" onclick="lsTab('rival')" style="padding:4px 10px;border-radius:6px;border:none;font-weight:800;font-size:11px;cursor:pointer;background:${live.statsView==='rival'?'#ef4444':'var(--s2)'};color:${live.statsView==='rival'?'white':'var(--td)'}">${esc((m.rival||"Rival").length>10?m.rival.slice(0,8)+"…":m.rival||"Rival")}</button>
+    ${rivalEnabled?`<div style="display:flex;gap:4px">
+      <button id="ls-tab-our" onclick="lsTab('our')" style="padding:4px 10px;border-radius:6px;border:none;font-weight:800;font-size:12px;cursor:pointer;background:${(live.statsView||'our')==='our'?(t?.color||'var(--orange)'):'var(--s2)'};color:${(live.statsView||'our')==='our'?'white':'var(--td)'}">${(t?.name||"Nuestro").split(" ")[0]}</button>
+      <button id="ls-tab-riv" onclick="lsTab('rival')" style="padding:4px 10px;border-radius:6px;border:none;font-weight:800;font-size:12px;cursor:pointer;background:${live.statsView==='rival'?'#ef4444':'var(--s2)'};color:${live.statsView==='rival'?'white':'var(--td)'}">${(m.rival||"Rival").length>10?m.rival.slice(0,8)+"…":m.rival||"Rival"}</button>
     </div>`:""}
   </div>
-  <div id="ls-table-wrap" style="flex:1;overflow:auto;padding:8px max(8px,env(safe-area-inset-right)) 8px max(8px,env(safe-area-inset-left))">
+  <div id="ls-table-wrap" style="flex:1;overflow:auto;padding:10px 8px">
     <div id="ls-our">${ourTable}</div>
     ${rivalEnabled?`<div id="ls-riv" style="display:none">${rivTable}</div>`:""}
   </div>`;
@@ -4552,6 +4752,7 @@ function _confirm(msg, confirmLabel, onConfirm){
 }
 
 load();render();checkBackupReminder();
+
 
 var _isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(/Macintosh/.test(navigator.userAgent)&&"ontouchend" in document);var _isSA=window.matchMedia("(display-mode:standalone)").matches||window.navigator.standalone===true;var _isAndroid=/Android/.test(navigator.userAgent);if(_isIOS&&!_isSA&&!localStorage.getItem("cbj-ios-never")&&!sessionStorage.getItem("cbj-ios-dismiss")){setTimeout(function(){var el=document.createElement("div");el.id="ios-ig";el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.92);z-index:99999;display:flex;align-items:flex-end;justify-content:center;";el.onclick=function(e){if(e.target===el){el.remove();sessionStorage.setItem("cbj-ios-dismiss","1");}};el.innerHTML='<div style="background:#0d1a2e;border-radius:20px 20px 0 0;border-top:1px solid #1e3a5f;width:100%;max-width:430px;padding:24px 20px calc(24px + env(safe-area-inset-bottom));animation:slideUp .3s ease-out"><div style="width:34px;height:4px;background:#1a3050;border-radius:2px;margin:0 auto 20px"></div><div style="text-align:center;margin-bottom:20px"><img src="'+_FULL_SVG_URL+'" style="height:48px;margin-bottom:14px;display:block;margin-left:auto;margin-right:auto"/><div style="font-size:14px;color:#7a9cc8;line-height:1.5">A\u00f1ade la app a tu pantalla de inicio</div></div><div style="background:#122236;border:1px solid #1e3a5f;border-radius:14px;padding:18px;margin-bottom:16px"><div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid #1e3a5f"><div style="width:36px;height:36px;border-radius:10px;background:rgba(249,115,22,.15);display:flex;align-items:center;justify-content:center;font-weight:900;color:#f97316">1</div><div><div style="font-weight:700;font-size:15px;color:#f0f4ff">Pulsa Compartir</div><div style="font-size:13px;color:#7a9cc8">El icono &#x2B06;&#xFE0F; en la barra inferior de Safari</div></div></div><div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid #1e3a5f"><div style="width:36px;height:36px;border-radius:10px;background:rgba(249,115,22,.15);display:flex;align-items:center;justify-content:center;font-weight:900;color:#f97316">2</div><div><div style="font-weight:700;font-size:15px;color:#f0f4ff">Desliza hacia abajo</div><div style="font-size:13px;color:#7a9cc8">Baja en el men\u00fa y busca <b style=\"color:#f0f4ff\">A\u00f1adir a pantalla de inicio</b></div></div></div><div style="display:flex;align-items:center;gap:12px"><div style="width:36px;height:36px;border-radius:10px;background:rgba(249,115,22,.15);display:flex;align-items:center;justify-content:center;font-weight:900;color:#f97316">3</div><div><div style="font-weight:700;font-size:15px;color:#f0f4ff">Pulsa A\u00f1adir</div><div style="font-size:13px;color:#7a9cc8">\u00a1Listo! Aparecer\u00e1 como una app m\u00e1s</div></div></div></div><button onclick="document.getElementById(\'ios-ig\').remove();sessionStorage.setItem(\'cbj-ios-dismiss\',\'1\')" style="width:100%;padding:14px;border-radius:10px;border:none;font-weight:800;font-size:15px;cursor:pointer;background:linear-gradient(135deg,#f97316,#c2410c);color:white">\u{1F44D} Entendido</button><div style="text-align:center;margin-top:12px"><button onclick="document.getElementById(\'ios-ig\').remove();localStorage.setItem(\'cbj-ios-never\',\'1\')" style="background:none;border:none;color:#3a5a80;font-size:13px;cursor:pointer">No volver a mostrar</button></div></div>';document.body.appendChild(el);},2000);}
 if(_isAndroid&&!_isSA&&!localStorage.getItem("cbj-android-never")&&!sessionStorage.getItem("cbj-android-dismiss")){setTimeout(function(){if(document.getElementById("install-banner"))return;var b=document.createElement("div");b.id="android-ig";b.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.92);z-index:99999;display:flex;align-items:flex-end;justify-content:center;";b.onclick=function(e){if(e.target===b){b.remove();sessionStorage.setItem("cbj-android-dismiss","1");}};b.innerHTML='<div style="background:#0d1a2e;border-radius:20px 20px 0 0;border-top:1px solid #1e3a5f;width:100%;max-width:430px;padding:24px 20px 32px;animation:slideUp .3s ease-out"><div style="width:34px;height:4px;background:#1a3050;border-radius:2px;margin:0 auto 20px"></div><div style="text-align:center;margin-bottom:20px"><img src="'+_FULL_SVG_URL+'" style="height:48px;margin-bottom:14px;display:block;margin-left:auto;margin-right:auto"/><div style="font-size:14px;color:#7a9cc8;line-height:1.5">A\u00f1ade la app a tu pantalla de inicio</div></div><div style="background:#122236;border:1px solid #1e3a5f;border-radius:14px;padding:18px;margin-bottom:16px"><div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid #1e3a5f"><div style="width:36px;height:36px;border-radius:10px;background:rgba(249,115,22,.15);display:flex;align-items:center;justify-content:center;font-weight:900;color:#f97316">1</div><div><div style="font-weight:700;font-size:15px;color:#f0f4ff">Abre el men\u00fa de Chrome</div><div style="font-size:13px;color:#7a9cc8">Pulsa los 3 puntos \u22EE en la esquina superior</div></div></div><div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid #1e3a5f"><div style="width:36px;height:36px;border-radius:10px;background:rgba(249,115,22,.15);display:flex;align-items:center;justify-content:center;font-weight:900;color:#f97316">2</div><div><div style="font-weight:700;font-size:15px;color:#f0f4ff">A\u00f1adir a pantalla de inicio</div><div style="font-size:13px;color:#7a9cc8">O \u201cInstalar aplicaci\u00f3n\u201d si aparece</div></div></div><div style="display:flex;align-items:center;gap:12px"><div style="width:36px;height:36px;border-radius:10px;background:rgba(249,115,22,.15);display:flex;align-items:center;justify-content:center;font-weight:900;color:#f97316">3</div><div><div style="font-weight:700;font-size:15px;color:#f0f4ff">Confirma con Instalar</div><div style="font-size:13px;color:#7a9cc8">\u00a1Listo! Se crear\u00e1 el icono en tu inicio</div></div></div></div><button onclick="document.getElementById(\'android-ig\').remove();sessionStorage.setItem(\'cbj-android-dismiss\',\'1\')" style="width:100%;padding:14px;border-radius:10px;border:none;font-weight:800;font-size:15px;cursor:pointer;background:linear-gradient(135deg,#f97316,#c2410c);color:white">\u{1F44D} Entendido</button><div style="text-align:center;margin-top:12px"><button onclick="document.getElementById(\'android-ig\').remove();localStorage.setItem(\'cbj-android-never\',\'1\')" style="background:none;border:none;color:#3a5a80;font-size:13px;cursor:pointer">No volver a mostrar</button></div></div>';document.body.appendChild(b);},3000);}
