@@ -120,6 +120,32 @@ Cada alta se guarda con fecha de inicio, fecha de alta, días totales, origen y 
 
 ---
 
+## Pantalla HOY
+
+### Qué muestra
+
+La pantalla **HOY** es la pantalla de inicio de Kortline. Muestra de un vistazo todo lo que tienes programado para el día actual:
+
+- 🏀 **Partidos de hoy** — cualquier partido cuya fecha sea hoy y no esté finalizado. Muestra estado (Pendiente / 🔴 EN JUEGO), hora, ubicación, marcador en vivo si está en curso, y botones para empezar/continuar partido o ver detalles.
+- 🏋️ **Entrenamientos de hoy** — equipos cuyo horario semanal incluye el día de la semana actual. Muestra estado (Pendiente / ✓ Pasada), %, contadores de asistencia y botón para pasar lista.
+
+### Título con el nombre del club (v1.6.12)
+
+El título principal del header muestra el **nombre del club** que hayas configurado en ⚙️ Ajustes del club (toca el logo arriba a la izquierda para abrirlos). Si no has personalizado el nombre, mantiene el genérico `Hoy`. La fecha aparece en una sub-línea debajo.
+
+### Botón ➕ flotante — actividad sorpresa (v1.6.12)
+
+En la esquina inferior derecha hay un **botón ➕ naranja** flotante (sobre la navbar). Sirve para crear actividades **fuera del horario habitual** del equipo:
+
+- 🏋️ **Entrenamiento sorpresa** — útil para refuerzos, recuperaciones o cualquier sesión extra que no estaba en el calendario semanal del equipo. Te lleva directamente al pase de lista de hoy.
+- 🏆 **Partido sorpresa** — abre el modal de crear partido con la fecha pre-rellenada a hoy. Útil para amistosos, copa o cualquier partido fuera del calendario habitual.
+
+Si tienes **un solo equipo**, la acción salta directamente. Si tienes **varios equipos**, te pide elegir antes; usa el botón ← del bottom sheet para volver al menú principal.
+
+> 💡 Tras crear el entrenamiento o partido sorpresa, aparecerá automáticamente en HOY hasta que finalice el día (o, en el caso del partido, hasta que lo marques como finalizado).
+
+---
+
 ## Pase de lista
 
 ### Pasar lista hoy

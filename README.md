@@ -9,7 +9,30 @@ Repositorio: [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/
 
 ## Historial de versiones
 
-### v1.6.11 — Autoguardado del pase de lista _(actual)_
+### v1.6.12 — HOY con marca de club y actividades sorpresa _(actual)_
+
+**Título de HOY personalizado con el nombre del club**
+
+El header de la pantalla HOY ahora muestra el nombre del club configurado en ⚙️ Ajustes (`S.clubName`) como título principal. Si no hay club configurado o sigue como "Kortline" (default), mantiene el "Hoy" genérico de siempre. La fecha pasa a una sub-línea más discreta debajo del título. Truncado con elipsis si el nombre es muy largo.
+
+**Botón ➕ flotante para entrenamientos y partidos sorpresa**
+
+Nuevo FAB naranja en la esquina inferior derecha de HOY (encima de la navbar, respeta `safe-area-inset-bottom` para iPhones con notch). Al pulsarlo abre un bottom sheet con dos opciones:
+
+- **🏋️ Entrenamiento sorpresa** — para pasar lista hoy aunque el equipo no tenga entreno programado en su horario semanal. Lleva directamente al pase de lista de hoy.
+- **🏆 Partido sorpresa** — abre el modal de crear partido con la fecha pre-rellenada a hoy (amistosos, copa, repesca…).
+
+Si solo hay un equipo en el club, el FAB salta directo a la acción. Si hay varios, el bottom sheet pasa a un picker de equipo con un botón ← para volver al menú principal. El picker muestra el color del equipo como chip lateral, su nombre y categoría.
+
+**Detalles de diseño**
+
+- FAB de 56 px circular, gradiente naranja oficial (`#F06318` → `#dc5414`), sombra elevada y feedback de pulsación con `:active` (escala 0,92).
+- En desktop el FAB se reposiciona dentro del frame de 430 px en vez de pegarse al borde derecho de la ventana.
+- El menú principal y el picker comparten el mismo `bottom sheet` con `.mhandle`, así que también se cierran arrastrando hacia abajo (drag-to-dismiss de v1.6.8).
+
+---
+
+### v1.6.11 — Autoguardado del pase de lista
 
 **Se elimina el botón 💾 Guardar del pase de lista**
 
@@ -428,7 +451,8 @@ MANUAL_USUARIO_KORTLINE.md    Manual de usuario
 
 ## Pendiente próximas versiones
 
-- Touch drag-to-dismiss en modales (el `mhandle` es decorativo, no funciona en iOS/Android PWA)
-- Visualización de sesiones pasadas/completadas en HOY
-- Botón `+` en HOY para entrenamientos/partidos sorpresa fuera de horario
-- Reetiquetar título de HOY con nombre del club (o marca de agua del logo)
+- WhatsApp de convocatorias (mensaje de call-up con horario, rival y quinteto)
+- Gestión de temporadas y archivado
+- Vista de resumen mensual
+- Estadísticas por jugador por partido
+- Plantilla de alineación para compartir
