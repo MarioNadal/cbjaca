@@ -1,46 +1,102 @@
-const CACHE = "kortline-v1";
-const URLS_TO_CACHE = [
-  "./",
-  "./index.html",
-  "./manifest.json"
+/* El Confesionario · Service Worker v4.8 */
+
+const VERSION = 'v5.3-2026-04-21';
+const APP_CACHE = `confesionario-app-${VERSION}`;
+const RUNTIME_CACHE = `confesionario-runtime-${VERSION}`;
+
+const APP_ASSETS = [
+  './',
+  './index.html',
+  './app.js',
+  './styles.css',
+  './manifest.json',
+  './icon192.png',
+  './icon512.png',
+  './appletouchicon.png',
+  './logobodaJyM-removebg-preview.png',
+  './logobodaJyMBlancoYNegro-removebg-preview.png',
 ];
-// Install: cache key files
-self.addEventListener("install", function(event) {
-  event.waitUntil(
-    caches.open(CACHE).then(function(cache) {
-      return cache.addAll(URLS_TO_CACHE);
-    }).catch(function() {})
+
+const CDN_HOSTS = [
+  'cdn.jsdelivr.net',
+  'fonts.googleapis.com',
+  'fonts.gstatic.com',
+];
+
+self.addEventListener('install', (e) => {
+  e.waitUntil(
+    caches.open(APP_CACHE)
+      .then((cache) => cache.addAll(APP_ASSETS))
+      .then(() => self.skipWaiting())
   );
-  self.skipWaiting();
 });
-// Activate: clean old caches
-self.addEventListener("activate", function(event) {
-  event.waitUntil(
-    caches.keys().then(function(keys) {
-      return Promise.all(
-        keys.filter(function(k) { return k !== CACHE; })
-            .map(function(k) { return caches.delete(k); })
-      );
-    })
+
+self.addEventListener('activate', (e) => {
+  e.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys
+          .filter((k) => k !== APP_CACHE && k !== RUNTIME_CACHE)
+          .map((k) => caches.delete(k))
+      )
+    ).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
-// Fetch: network first, fallback to cache
-self.addEventListener("fetch", function(event) {
-  if (event.request.method !== "GET") return;
-  event.respondWith(
-    fetch(event.request).then(function(response) {
-      if (response && response.status === 200) {
-        var responseClone = response.clone();
-        caches.open(CACHE).then(function(cache) {
-          cache.put(event.request, responseClone);
-        });
+
+self.addEventListener('message', (event) => {
+  if (event.data === 'SKIP_WAITING') self.skipWaiting();
+});
+
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  if (req.method !== 'GET') return;
+  if (req.headers.has('range')) return;
+  const url = new URL(req.url);
+
+  if (url.origin === self.location.origin) {
+    event.respondWith(cacheFirst(req));
+    return;
+  }
+  if (CDN_HOSTS.includes(url.hostname)) {
+    event.respondWith(staleWhileRevalidate(req));
+    return;
+  }
+  event.respondWith(fetch(req).catch(() => caches.match(req)));
+});
+
+async function cacheFirst(req) {
+  const cached = await caches.match(req);
+  if (cached) {
+    fetch(req).then((res) => {
+      if (res && res.ok) {
+        const clone = res.clone();
+        caches.open(APP_CACHE).then((c) => c.put(req, clone)).catch(() => {});
       }
-      return response;
-    }).catch(function() {
-      return caches.match(event.request).then(function(cached) {
-        return cached || new Response("Offline", { status: 503 });
-      });
-    })
-  );
-});
+    }).catch(() => {});
+    return cached;
+  }
+  try {
+    const res = await fetch(req);
+    if (res && res.ok) {
+      const clone = res.clone();
+      caches.open(APP_CACHE).then((c) => c.put(req, clone)).catch(() => {});
+    }
+    return res;
+  } catch (err) {
+    if (req.mode === 'navigate') {
+      const fallback = await caches.match('./index.html');
+      if (fallback) return fallback;
+    }
+    throw err;
+  }
+}
+
+async function staleWhileRevalidate(req) {
+  const cache = await caches.open(RUNTIME_CACHE);
+  const cached = await cache.match(req);
+  const networkPromise = fetch(req).then((res) => {
+    if (res && res.ok) cache.put(req, res.clone()).catch(() => {});
+    return res;
+  }).catch(() => null);
+  return cached || (await networkPromise) || new Response('', { status: 504 });
+}
