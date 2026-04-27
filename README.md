@@ -9,7 +9,29 @@ Repositorio: [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/
 
 ## Historial de versiones
 
-### v1.6.13 — Reglamento FIBA en el live game _(actual)_
+### v1.6.14 — Medio tiempo configurable + hotfix B-42 _(actual)_
+
+**Selector de duración del medio tiempo en el overlay**
+
+Al terminar el Q2 (final de la primera mitad), el overlay de fin de cuarto ahora incluye un selector de pildoras encima del botón **▶ Iniciar Medio tiempo**:
+
+`1' · 3' · 5' · 10' (default) · 15' · ⚙ Otro`
+
+La pildora seleccionada queda resaltada en naranja y el botón Iniciar refleja la duración elegida en tiempo real. **⚙ Otro** abre un prompt para introducir cualquier valor entre 1 y 30 minutos. La selección sólo afecta a ese descanso concreto: el siguiente medio tiempo del próximo partido vuelve al default 10'.
+
+Cambio acotado: los descansos cortos entre Q1↔Q2 y Q3↔Q4 siguen en 1 minuto fijo. Si en una versión futura quieres también esos configurables, se aplica el mismo patrón.
+
+**Hotfix B-42 — esta vez de verdad**
+
+El fix del v1.6.13 para "faltas de equipo en prórroga continúan del Q4" no se ejecutaba porque la inicialización de `m.live` ya pre-allocaba `quarters+1` slots de `teamFouls`, así que el `while(length<newQ)` no entraba nunca. Ahora `activateOT()` sobrescribe explícitamente el slot del nuevo OT con el valor del periodo previo (Q4 en OT1, OT1 en OT2, etc.). Verificado en simulación: con `teamFouls=[..,4,0]` antes de OT, tras `activateOT()` queda `[..,4,4]` — el OT arranca con las 4 faltas acumuladas del Q4.
+
+**Pendientes para v1.6.15**
+
+Del informe de QA contra reglamento siguen abiertos: 🟡 descansos entre cuartos según FIBA (1' → 2', B-44), 🟡 display de TM en prórroga (B-46), 🟡 aviso visual al entrar en bonus (B-49), 🟢 wording del badge BONUS (B-52). Todos no críticos.
+
+---
+
+### v1.6.13 — Reglamento FIBA en el live game
 
 Pasada de QA del seguimiento en vivo contra el reglamento FIBA 2024-25 / FEB sénior amateur. Se simuló un partido completo, se mapeó el código contra las reglas y se priorizaron los hallazgos. Esta versión cierra los **🔴 críticos** y los **🟢 nice-to-have triviales** detectados.
 

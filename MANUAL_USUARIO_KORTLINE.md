@@ -368,10 +368,13 @@ Pulsa el botón **T.M** (esquina superior derecha del reloj) y selecciona qué e
 ### Descansos entre cuartos
 
 Al terminar cada cuarto aparece un overlay centrado a pantalla completa con las acciones del último segundo antes del descanso:
-- Q1↔Q2 y Q3↔Q4 → **1 minuto**
-- Medio tiempo (Q2↔Q3) → **10 minutos**
 
-Basado en el reglamento FEB amateur.
+- Q1↔Q2 y Q3↔Q4 → **1 minuto** (fijo)
+- Medio tiempo (Q2↔Q3) → **10 minutos por defecto**, configurable en el momento (v1.6.14)
+
+**Selector de duración del medio tiempo (v1.6.14).** Encima del botón **▶ Iniciar Medio tiempo** hay un selector de pildoras: `1' · 3' · 5' · 10' (default) · 15' · ⚙ Otro`. Toca la pildora que quieras y el botón Iniciar se actualiza con esa duración. **⚙ Otro** abre un prompt para meter cualquier valor entre 1 y 30 minutos. Útil cuando el árbitro acorta o alarga el descanso, o en partidos amistosos donde el descanso es más corto.
+
+La elección sólo afecta al descanso del partido en curso: el siguiente partido vuelve al default 10'.
 
 ### Prórroga automática
 
