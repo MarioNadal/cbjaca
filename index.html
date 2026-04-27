@@ -614,6 +614,192 @@ function _totalFouls(st){
 }
 
 /* ═══════════════════════════════════════
+   SHOT CHART · CANCHA SVG (v1.7.0)
+   Media cancha FIBA en proporciones reales (15m ancho × 14m fondo).
+   ViewBox 0 0 1500 1400 (cm). Aro en (750, 1242.5) — a 1.575m del fondo.
+   Coordenadas de los tiros se guardan normalizadas (x,y en 0-1).
+═══════════════════════════════════════ */
+const _COURT_W=1500, _COURT_H=1400;
+const _ARO_X=750, _ARO_Y=1242.5;
+const _ARC3_R=675; // radio arco de 3 en cm (6.75m FIBA)
+const _CORNER_X_L=90, _CORNER_X_R=1410; // x de las líneas rectas del corner three (90cm de la banda)
+
+// Devuelve 2 o 3 según la zona de la cancha (coords normalizadas 0-1)
+function _classifyShot(xNorm,yNorm){
+  const x=xNorm*_COURT_W, y=yNorm*_COURT_H;
+  // Líneas rectas del corner three
+  if(x<_CORNER_X_L||x>_CORNER_X_R)return 3;
+  // Arco curvo
+  const dx=x-_ARO_X, dy=y-_ARO_Y;
+  const dist=Math.sqrt(dx*dx+dy*dy);
+  return dist>=_ARC3_R?3:2;
+}
+
+// Genera el SVG de la cancha. opts = {width, shots, interactive, ariaLabel}
+function _courtSVG(opts={}){
+  const w=opts.width||300;
+  const shots=opts.shots||[];
+  const showShots=opts.showShots!==false;
+  const interactive=!!opts.interactive;
+  const tapHandler=interactive?` style="cursor:crosshair;touch-action:manipulation" onclick="_courtSVGTap(event,this)" id="${opts.id||'court-svg'}"`:` style="display:block"`;
+  const shotMarkers=showShots?shots.map(s=>{
+    const cx=(s.x||0)*_COURT_W, cy=(s.y||0)*_COURT_H;
+    if(s.made){
+      const fill=s.value===3?"#3b82f6":"#22c55e";
+      return `<circle cx="${cx}" cy="${cy}" r="22" fill="${fill}" stroke="white" stroke-width="3" opacity=".88"/>`;
+    } else {
+      return `<g opacity=".75"><line x1="${cx-18}" y1="${cy-18}" x2="${cx+18}" y2="${cy+18}" stroke="#ef4444" stroke-width="6" stroke-linecap="round"/><line x1="${cx-18}" y1="${cy+18}" x2="${cx+18}" y2="${cy-18}" stroke="#ef4444" stroke-width="6" stroke-linecap="round"/></g>`;
+    }
+  }).join(""):"";
+  return `<svg viewBox="0 0 ${_COURT_W} ${_COURT_H}" width="${w}"${tapHandler} xmlns="http://www.w3.org/2000/svg">
+    <!-- Suelo de la cancha -->
+    <rect x="0" y="0" width="${_COURT_W}" height="${_COURT_H}" fill="rgba(240,99,24,.04)" stroke="rgba(255,255,255,.55)" stroke-width="6"/>
+    <!-- Semicírculo del medio campo -->
+    <path d="M 575 0 A 175 175 0 0 1 925 0" stroke="rgba(255,255,255,.55)" stroke-width="4" fill="none"/>
+    <!-- Zona (pintura) -->
+    <rect x="505" y="820" width="490" height="580" stroke="rgba(255,255,255,.55)" stroke-width="4" fill="rgba(240,99,24,.08)"/>
+    <!-- Semicírculo del tiro libre (arriba de la zona) -->
+    <path d="M 570 820 A 180 180 0 0 1 930 820" stroke="rgba(255,255,255,.55)" stroke-width="4" fill="none"/>
+    <!-- Línea del tiro libre (parte inferior del semicírculo, punteada) -->
+    <path d="M 570 820 A 180 180 0 0 0 930 820" stroke="rgba(255,255,255,.4)" stroke-width="3" stroke-dasharray="20,15" fill="none"/>
+    <!-- Tablero -->
+    <line x1="660" y1="1280" x2="840" y2="1280" stroke="rgba(255,255,255,.7)" stroke-width="8"/>
+    <!-- Aro -->
+    <circle cx="${_ARO_X}" cy="${_ARO_Y}" r="22.75" stroke="#F06318" stroke-width="6" fill="none"/>
+    <!-- Arco de 3 -->
+    <path d="M ${_CORNER_X_L} 1400 L ${_CORNER_X_L} 1101 A ${_ARC3_R} ${_ARC3_R} 0 0 1 ${_CORNER_X_R} 1101 L ${_CORNER_X_R} 1400" stroke="rgba(255,255,255,.7)" stroke-width="4" fill="none"/>
+    <!-- Semicírculo de no-charge -->
+    <path d="M 625 ${_ARO_Y} A 125 125 0 0 1 875 ${_ARO_Y}" stroke="rgba(255,255,255,.4)" stroke-width="3" fill="none"/>
+    ${shotMarkers}
+  </svg>`;
+}
+
+// Maneja el tap en la cancha durante la captura (modo interactivo).
+// Llama a window._shotChartCallback(xNorm, yNorm) que la captura registra.
+function _courtSVGTap(evt,svg){
+  const r=svg.getBoundingClientRect();
+  const cx=(evt.clientX!=null?evt.clientX:(evt.touches?.[0]?.clientX||0));
+  const cy=(evt.clientY!=null?evt.clientY:(evt.touches?.[0]?.clientY||0));
+  const xNorm=Math.max(0,Math.min(1,(cx-r.left)/r.width));
+  const yNorm=Math.max(0,Math.min(1,(cy-r.top)/r.height));
+  if(typeof window._shotChartCallback==="function"){
+    window._shotChartCallback(xNorm,yNorm);
+  }
+}
+
+/* ═══════════════════════════════════════
+   SHOT CHART · MODAL DE CAPTURA (v1.7.0)
+   Abre la cancha para que el anotador toque la zona donde se hizo el tiro.
+   Si la zona discrepa con el botón pulsado (+2 vs zona de 3), pre-aviso de
+   cambio antes de registrar.
+═══════════════════════════════════════ */
+function openShotChartModal(pid,action,pts){
+  document.getElementById("m-shotchart")?.remove();
+  const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
+  const players=pl(S.teamId);
+  const rivalPlayers=m.rivalPlayers||[];
+  const isRival=rivalPlayers.some(p=>p.id===pid);
+  const p=isRival?rivalPlayers.find(x=>x.id===pid):players.find(x=>x.id===pid);
+  const pname=_shortName(p?.name||"?");
+  const pNum=p?.number||"?";
+  const made=action==="p2m"||action==="p3m";
+  const value=(action==="p3m"||action==="p3a")?3:2;
+  const labelPts=made?(value===3?"+3 Triple":"+2 Canasta"):(value===3?"✗ Fallo de 3":"✗ Fallo de 2");
+  const labelColor=made?"#22c55e":"#ef4444";
+
+  const el=document.createElement("div");
+  el.id="m-shotchart";
+  el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(7,15,30,.96);z-index:9996;display:flex;flex-direction:column;align-items:center;padding:16px;overflow-y:auto;";
+  el.innerHTML=`<div style="width:100%;max-width:380px;text-align:center">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="text-align:left">
+        <div style="font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--orange)">🎯 Shot Chart</div>
+        <div style="font-size:14px;font-weight:700;color:var(--tx);margin-top:2px">${esc(pname)} <span style="color:var(--td);font-size:11px">#${pNum}</span></div>
+      </div>
+      <button onclick="_cancelShotChart()" style="background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--td);cursor:pointer;font-size:12px;font-weight:700;padding:6px 10px">✕ Cancelar</button>
+    </div>
+    <div style="background:${made?"rgba(34,197,94,.1)":"rgba(239,68,68,.1)"};border:1px solid ${labelColor}55;border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:13px;font-weight:800;color:${labelColor}">
+      ${labelPts} — Pulsa la zona donde se hizo
+    </div>
+    <div style="background:rgba(0,0,0,.3);border-radius:14px;padding:10px;border:1px solid var(--border)">
+      ${_courtSVG({width:340,interactive:true,id:"shotchart-court",showShots:true,shots:m.live.shots||[]})}
+    </div>
+    <div style="font-size:11px;color:var(--td);margin-top:10px;line-height:1.5">
+      Si tocas fuera del arco con +2 (o dentro con +3), te avisaremos antes de cambiar.
+    </div>
+  </div>`;
+  document.body.appendChild(el);
+
+  // Configurar callback global que se dispara al tocar la cancha
+  window._shotChartCallback=(xNorm,yNorm)=>{
+    const detected=_classifyShot(xNorm,yNorm);
+    if(detected===value){
+      // Coincide → registrar directamente
+      _confirmShot(pid,action,pts,xNorm,yNorm);
+    } else {
+      // Discrepa → pre-aviso
+      _previewShotChange(pid,action,pts,xNorm,yNorm,detected);
+    }
+  };
+}
+
+// Pre-aviso cuando la zona detectada discrepa con el botón pulsado
+function _previewShotChange(pid,action,pts,xNorm,yNorm,detected){
+  const wasValue=(action==="p3m"||action==="p3a")?3:2;
+  const wasMade=action==="p2m"||action==="p3m";
+  const newAction=wasMade?(detected===3?"p3m":"p2m"):(detected===3?"p3a":"p2a");
+  const newPts=wasMade?detected:0;
+  document.getElementById("m-shotchange")?.remove();
+  const el=document.createElement("div");
+  el.id="m-shotchange";
+  el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:99998;display:flex;align-items:center;justify-content:center;padding:20px;";
+  const labelOld=wasValue===3?(wasMade?"Triple anotado":"Triple fallado"):(wasMade?"Canasta de 2":"Fallo de 2");
+  const labelNew=detected===3?(wasMade?"Triple anotado":"Triple fallado"):(wasMade?"Canasta de 2":"Fallo de 2");
+  const zoneLabel=detected===3?"fuera del arco de 3":"dentro del arco de 3";
+  el.innerHTML=`<div style="background:var(--s);border:2px solid var(--orange);border-radius:14px;padding:22px 18px;width:100%;max-width:340px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.7)">
+    <div style="font-size:32px;margin-bottom:8px">⚠️</div>
+    <div style="font-family:var(--font-d);font-weight:900;font-size:17px;color:var(--orange);margin-bottom:6px">¿Cambiar a ${detected} puntos?</div>
+    <div style="font-size:13px;color:var(--td);margin-bottom:16px;line-height:1.5">
+      Pulsaste <b style="color:var(--tx)">${labelOld}</b> pero la zona donde tocaste está <b style="color:var(--orange)">${zoneLabel}</b>.<br/>
+      ¿Registrar como <b style="color:var(--tx)">${labelNew}</b>?
+    </div>
+    <button onclick="_acceptShotChange('${pid}','${newAction}',${newPts},${xNorm},${yNorm})" style="width:100%;padding:13px;border:none;border-radius:10px;font-weight:900;font-size:15px;cursor:pointer;background:linear-gradient(135deg,var(--orange),var(--orange2));color:white;margin-bottom:8px">✓ Sí, registrar como ${detected}p</button>
+    <button onclick="_keepOriginalShot('${pid}','${action}',${pts},${xNorm},${yNorm})" style="width:100%;padding:11px;border:1px solid var(--border);border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;background:var(--s2);color:var(--td)">Mantener como ${wasValue}p</button>
+  </div>`;
+  document.body.appendChild(el);
+}
+
+window._acceptShotChange=function(pid,newAction,newPts,xNorm,yNorm){
+  document.getElementById("m-shotchange")?.remove();
+  _confirmShot(pid,newAction,newPts,xNorm,yNorm);
+};
+window._keepOriginalShot=function(pid,action,pts,xNorm,yNorm){
+  document.getElementById("m-shotchange")?.remove();
+  _confirmShot(pid,action,pts,xNorm,yNorm);
+};
+window._cancelShotChart=function(){
+  document.getElementById("m-shotchart")?.remove();
+  window._shotChartCallback=null;
+};
+
+// Registra la acción y el shot en m.live.shots
+function _confirmShot(pid,action,pts,xNorm,yNorm){
+  document.getElementById("m-shotchart")?.remove();
+  window._shotChartCallback=null;
+  const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
+  // Marcar como "directo" para que liveAction NO vuelva a abrir el modal
+  window._scSkipCapture=true;
+  liveAction(pid,action,pts);
+  window._scSkipCapture=false;
+  // Persistir las coordenadas en m.live.shots[]
+  if(!m.live.shots)m.live.shots=[];
+  const made=action==="p2m"||action==="p3m";
+  const value=(action==="p3m"||action==="p3a")?3:2;
+  m.live.shots.push({pid,made,value,x:xNorm,y:yNorm,q:m.live.q,clockAt:m.live.clockSec,ts:Date.now()});
+  save();render();
+}
+
+/* ═══════════════════════════════════════
    NOMBRE CORTO PARA UI (v1.6.15 · F2)
    Cuando un jugador se llama "I. Javier Rodríguez" la UI mostraba "I."
    (split[0] = inicial). Saltamos las iniciales/abreviaturas para mostrar
@@ -1266,7 +1452,7 @@ function autoBackup(){
 
 function exportBackup(){
   const filename=`kortline-backup-${td()}.json`;
-  const data={version:"1.6.15",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
+  const data={version:"1.7.0",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
   const json=JSON.stringify(data,null,2);
   const blob=new Blob([json],{type:"application/json"});
   // Descarga directa
@@ -1897,6 +2083,7 @@ function render(){
   else if(S.screen==="matchList")r.innerHTML=matchList();
   else if(S.screen==="matchDetail")r.innerHTML=matchDetail();
   else if(S.screen==="liveGame")r.innerHTML=liveGame();
+  else if(S.screen==="shotMap")r.innerHTML=shotMap();
   requestAnimationFrame(()=>setTimeout(_initCharts,0));
 }
 
@@ -3015,7 +3202,7 @@ function openClubSettings(){
       <div class="stg-sec-title">ℹ️ Acerca de</div>
       <div style="text-align:center;padding:18px 0 6px">
         <img src="${_FULL_SVG_URL}" style="height:36px;max-width:100%;opacity:0.9;margin-bottom:10px"/>
-        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.6.15 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
+        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.7.0 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
       </div>
     </div>
     <button class="btn-p" onclick="saveClubSettings()">Guardar configuración</button>
@@ -4055,6 +4242,7 @@ function matchDetail(){
       <div style="font-family:var(--font-d);font-weight:900;font-size:17px">${esc(m.rival||"Rival")}</div>
       <div style="font-size:11px;color:var(--orange)">${m.date?fd(m.date,true):"Sin fecha"} · ${locLabel}</div>
     </div>
+    ${m.shotChart&&(m.live?.shots||[]).length>0?`<button onclick="navTo('shotMap')" style="background:rgba(240,99,24,.15);border:1px solid rgba(240,99,24,.4);color:var(--orange);width:36px;height:36px;border-radius:9px;cursor:pointer;font-size:16px;flex-shrink:0;margin-right:4px" title="Mapa de tiros">📍</button>`:""}
     <button class="bbtn" onclick="openMatchModal(mById(S.teamId,S.matchId))">✏️</button>
   </div></header>
   <div class="content">
@@ -4172,6 +4360,13 @@ function openMatchModal(init){
         <div style="font-size:12px;color:var(--td);margin-top:2px">FIBA: el reloj se detiene siempre que se pita una falta${_cat?` · default ${_cat}: ${_defStop?"ON":"OFF"}`:""}</div>
       </div>
       <button id="${mid}-sof-btn" class="tswitch ${_defStop?'on':''}" onclick="this.classList.toggle('on')"></button>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--s2);border:1px solid var(--border);border-radius:10px;margin-bottom:12px">
+      <div>
+        <div style="font-weight:700;font-size:14px">🎯 Modo Shot Chart <span style="font-size:9px;font-weight:700;background:rgba(240,99,24,.18);color:var(--orange);padding:2px 6px;border-radius:4px;letter-spacing:1px;text-transform:uppercase;margin-left:4px">PRO</span></div>
+        <div style="font-size:12px;color:var(--td);margin-top:2px">Cada tiro de campo (+2/+3 y fallos) abre la cancha para tocar la zona donde se hizo. Genera mapa de tiros del partido.</div>
+      </div>
+      <button id="${mid}-sc-btn" class="tswitch ${init?.shotChart?'on':''}" onclick="this.classList.toggle('on')"></button>
     </div>
     <button class="btn-p" onclick="saveMatchMeta('${mid}','${init?.id||""}')">${init?"Guardar":"Crear Partido"}</button>
     <button class="btn-s" onclick="_closeModal('${mid}')">Cancelar</button>
@@ -4400,14 +4595,15 @@ function saveMatchMeta(mid,eid){
   const rivalStatsEnabled=document.getElementById(mid+"-rse-btn")?.classList.contains("on")||false;
   const teamOnlyStats=document.getElementById(mid+"-tos-btn")?.classList.contains("on")||false;
   const stopOnFoul=document.getElementById(mid+"-sof-btn")?.classList.contains("on")||false;
+  const shotChart=document.getElementById(mid+"-sc-btn")?.classList.contains("on")||false;
   if(!S.matches[S.teamId])S.matches[S.teamId]=[];
   if(eid){
-    S.matches[S.teamId]=S.matches[S.teamId].map(m=>m.id===eid?{...m,rival,date,time,venue,location,quarters,qMins,rivalStatsEnabled,teamOnlyStats,stopOnFoul}:m);
+    S.matches[S.teamId]=S.matches[S.teamId].map(m=>m.id===eid?{...m,rival,date,time,venue,location,quarters,qMins,rivalStatsEnabled,teamOnlyStats,stopOnFoul,shotChart}:m);
     toast("✅ Partido actualizado");
     clearDirty();
     document.getElementById(mid)?.remove();save();render();
   } else {
-    const nm={id:uid(),rival,date,time,venue,location,quarters,qMins,rivalStatsEnabled,teamOnlyStats,stopOnFoul,q:[null,null,null,null,null,null,null,null,null,null],convocados:[],titulares:[],capitan:null,rivalPlayers:[],notes:""};
+    const nm={id:uid(),rival,date,time,venue,location,quarters,qMins,rivalStatsEnabled,teamOnlyStats,stopOnFoul,shotChart,q:[null,null,null,null,null,null,null,null,null,null],convocados:[],titulares:[],capitan:null,rivalPlayers:[],notes:""};
     S.matches[S.teamId].push(nm);
     S.matchId=nm.id;
     clearDirty();
@@ -5191,6 +5387,7 @@ function liveGame(){
     <div style="display:flex;gap:5px;align-items:center">
       ${bonus?`<span style="background:rgba(245,158,11,.25);color:#f59e0b;border:1px solid rgba(245,158,11,.4);border-radius:6px;font-size:10px;font-weight:800;padding:2px 6px">BONUS</span>`:""}
       <div style="background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:3px 8px;font-size:11px;font-weight:700;color:var(--td)">F:${teamFouls}/4</div>
+      ${m.shotChart?`<button onclick="navTo('shotMap')" style="width:32px;height:32px;border-radius:7px;background:rgba(240,99,24,.15);border:1px solid rgba(240,99,24,.4);color:var(--orange);cursor:pointer;font-size:14px;font-weight:900" title="Mapa de tiros">📍</button>`:""}
       <button onclick="shareMatchResult()" style="width:32px;height:32px;border-radius:7px;background:linear-gradient(135deg,#25d366,#128c7e);border:none;cursor:pointer;font-size:15px" title="Compartir marcador">📤</button>
       <button onclick="confirmFinishMatch('${S.teamId}','${S.matchId}')" style="width:32px;height:32px;border-radius:7px;background:rgba(107,114,128,.15);border:1px solid #6b728055;cursor:pointer;font-size:15px" title="Finalizar partido">🏁</button>
     </div>
@@ -5266,8 +5463,102 @@ function _ensureQSlot(live,qi){
   while(live.qScores.length<=qi)live.qScores.push([0,0]);
   if(!live.qScores[qi])live.qScores[qi]=[0,0];
 }
+/* ═══════════════════════════════════════
+   SHOT MAP · pantalla de visualización (v1.7.0)
+═══════════════════════════════════════ */
+function shotMap(){
+  const t=S.teams.find(x=>x.id===S.teamId);
+  const m=mById(S.teamId,S.matchId);
+  if(!t||!m||!m.live){S.screen="liveGame";render();return"";}
+  const allShots=m.live.shots||[];
+  const players=pl(S.teamId);
+  const filterPid=S.shotMapPid||"all";
+  const filterQ=S.shotMapQ||"all";
+  const filterMade=S.shotMapMade||"all"; // "all" | "made" | "miss"
+
+  let shots=allShots;
+  if(filterPid!=="all")shots=shots.filter(s=>s.pid===filterPid);
+  if(filterQ!=="all")shots=shots.filter(s=>String(s.q)===String(filterQ));
+  if(filterMade==="made")shots=shots.filter(s=>s.made);
+  else if(filterMade==="miss")shots=shots.filter(s=>!s.made);
+
+  const made2=shots.filter(s=>s.made&&s.value===2).length;
+  const made3=shots.filter(s=>s.made&&s.value===3).length;
+  const miss2=shots.filter(s=>!s.made&&s.value===2).length;
+  const miss3=shots.filter(s=>!s.made&&s.value===3).length;
+  const tot2=made2+miss2, tot3=made3+miss3;
+  const pct2=tot2>0?Math.round(100*made2/tot2):0;
+  const pct3=tot3>0?Math.round(100*made3/tot3):0;
+  const totMade=made2+made3, totAtt=made2+made3+miss2+miss3;
+  const pctAll=totAtt>0?Math.round(100*totMade/totAtt):0;
+
+  const nQ=m.quarters||4;
+  const otCount=m.live.otCount||0;
+  const qLabels=[...Array.from({length:nQ},(_,i)=>(nQ===4?"Q":"P")+(i+1)),...Array.from({length:otCount},(_,i)=>otCount===1?"OT":"OT"+(i+1))];
+
+  const playerOpts=players.filter(p=>(m.convocados||[]).includes(p.id)).sort((a,b)=>(a.number||99)-(b.number||99));
+
+  return`<header class="header"><div class="hrow">
+    <button class="bbtn" onclick="navBack()">←</button>
+    <div style="flex:1"><div style="font-family:var(--font-d);font-weight:900;font-size:18px">📍 Mapa de tiros</div><div style="font-size:11px;color:var(--orange)">${esc(t.name)} vs ${esc(m.rival||"Rival")}</div></div>
+  </div></header>
+  <div class="content" style="padding-bottom:90px">
+    <!-- Filtros -->
+    <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:12px">
+      <div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--td);margin-bottom:6px">JUGADOR</div>
+      <select onchange="S.shotMapPid=this.value;render()" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--s);color:var(--tx);font-size:13px;margin-bottom:10px">
+        <option value="all" ${filterPid==="all"?"selected":""}>Todos los jugadores</option>
+        ${playerOpts.map(p=>`<option value="${p.id}" ${filterPid===p.id?"selected":""}>#${p.number||"?"} ${esc(p.name)}</option>`).join("")}
+      </select>
+      <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+        <button onclick="S.shotMapQ='all';render()" style="padding:6px 10px;border-radius:7px;border:${filterQ==="all"?"2px solid var(--orange)":"1px solid var(--border)"};background:${filterQ==="all"?"rgba(240,99,24,.15)":"var(--s)"};color:${filterQ==="all"?"var(--orange)":"var(--td)"};cursor:pointer;font-size:12px;font-weight:700">Todos</button>
+        ${qLabels.map((ql,i)=>`<button onclick="S.shotMapQ='${i+1}';render()" style="padding:6px 10px;border-radius:7px;border:${filterQ===String(i+1)?"2px solid var(--orange)":"1px solid var(--border)"};background:${filterQ===String(i+1)?"rgba(240,99,24,.15)":"var(--s)"};color:${filterQ===String(i+1)?"var(--orange)":"var(--td)"};cursor:pointer;font-size:12px;font-weight:700">${ql}</button>`).join("")}
+      </div>
+      <div style="display:flex;gap:6px">
+        <button onclick="S.shotMapMade='all';render()" style="flex:1;padding:6px 10px;border-radius:7px;border:${filterMade==="all"?"2px solid var(--orange)":"1px solid var(--border)"};background:${filterMade==="all"?"rgba(240,99,24,.15)":"var(--s)"};color:${filterMade==="all"?"var(--orange)":"var(--td)"};cursor:pointer;font-size:12px;font-weight:700">Todos</button>
+        <button onclick="S.shotMapMade='made';render()" style="flex:1;padding:6px 10px;border-radius:7px;border:${filterMade==="made"?"2px solid #22c55e":"1px solid var(--border)"};background:${filterMade==="made"?"rgba(34,197,94,.15)":"var(--s)"};color:${filterMade==="made"?"#22c55e":"var(--td)"};cursor:pointer;font-size:12px;font-weight:700">✓ Anotados</button>
+        <button onclick="S.shotMapMade='miss';render()" style="flex:1;padding:6px 10px;border-radius:7px;border:${filterMade==="miss"?"2px solid #ef4444":"1px solid var(--border)"};background:${filterMade==="miss"?"rgba(239,68,68,.15)":"var(--s)"};color:${filterMade==="miss"?"#ef4444":"var(--td)"};cursor:pointer;font-size:12px;font-weight:700">✗ Fallados</button>
+      </div>
+    </div>
+    <!-- Resumen -->
+    ${totAtt>0?`<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:12px">
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:10px;text-align:center">
+        <div style="font-family:var(--font-d);font-weight:900;font-size:22px;color:#22c55e">${made2}/${tot2}</div>
+        <div style="font-size:10px;color:var(--td);font-weight:700">2 PUNTOS · ${pct2}%</div>
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:10px;text-align:center">
+        <div style="font-family:var(--font-d);font-weight:900;font-size:22px;color:#3b82f6">${made3}/${tot3}</div>
+        <div style="font-size:10px;color:var(--td);font-weight:700">TRIPLES · ${pct3}%</div>
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:10px;text-align:center">
+        <div style="font-family:var(--font-d);font-weight:900;font-size:22px;color:var(--orange)">${totMade}/${totAtt}</div>
+        <div style="font-size:10px;color:var(--td);font-weight:700">TOTAL · ${pctAll}%</div>
+      </div>
+    </div>`:""}
+    <!-- Cancha con tiros -->
+    <div style="background:rgba(0,0,0,.3);border-radius:14px;padding:12px;border:1px solid var(--border);text-align:center">
+      ${shots.length>0?_courtSVG({width:340,shots,showShots:true}):`<div style="padding:30px 10px;color:var(--tm);font-size:13px">Sin tiros con el filtro actual.</div>`+_courtSVG({width:340,shots:[],showShots:false})}
+    </div>
+    <!-- Leyenda -->
+    <div style="display:flex;gap:14px;justify-content:center;margin-top:12px;font-size:11px;color:var(--td);font-weight:700">
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#22c55e;border:2px solid white;vertical-align:middle"></span> 2pt anotado</span>
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3b82f6;border:2px solid white;vertical-align:middle"></span> 3pt anotado</span>
+      <span><span style="color:#ef4444;font-weight:900;font-size:14px">✗</span> Fallado</span>
+    </div>
+  </div>
+  ${navBar()}`;
+}
+
 function liveAction(pid,action,pts){
   const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
+  // v1.7.0 · Shot Chart: si está activo y es tiro de campo, derivar al modal de captura
+  // (a menos que ya venga del propio shot chart, marcado con _scSkipCapture).
+  if(m.shotChart && !window._scSkipCapture){
+    if(action==="p2m"||action==="p3m"||action==="p2a"||action==="p3a"){
+      openShotChartModal(pid,action,pts);
+      return;
+    }
+  }
   const live=m.live;
   const m2=mById(S.teamId,S.matchId);
   const isRivalPid=!!(m2?.rivalPlayers||[]).find(p=>p.id===pid);
