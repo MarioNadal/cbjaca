@@ -612,6 +612,22 @@ function _totalFouls(st){
   if(!st)return 0;
   return (st.foul||0)+(st.ftech||0)+(st.funsport||0)+(st.fdq||0);
 }
+
+/* ═══════════════════════════════════════
+   NOMBRE CORTO PARA UI (v1.6.15 · F2)
+   Cuando un jugador se llama "I. Javier Rodríguez" la UI mostraba "I."
+   (split[0] = inicial). Saltamos las iniciales/abreviaturas para mostrar
+   un nombre legible.
+═══════════════════════════════════════ */
+function _shortName(full){
+  const parts=(full||"").trim().split(/\s+/).filter(Boolean);
+  if(!parts.length)return "?";
+  // Si el primer trozo es una inicial (1-2 letras o termina en "."), usar el siguiente
+  const first=parts[0];
+  const isInitial=first.length<=2 || /\.$/.test(first);
+  if(isInitial && parts[1])return parts[1];
+  return first;
+}
 let _alertTimer=null;
 function _clockAlert(msg,dur=2000){
   document.querySelectorAll(".clock-alert").forEach(e=>e.remove());
@@ -978,7 +994,7 @@ function _tmPickIn(inPid){
   const players=pl(S.teamId);
   const pIn=players.find(p=>p.id===inPid);
   const pOut=players.find(p=>p.id===_tmOutPid);
-  const desc="↔ "+(pIn?.name||"?").split(" ")[0]+" ← "+(pOut?.name||"?").split(" ")[0];
+  const desc="↔ "+_shortName(pIn?.name||"?")+" ← "+_shortName(pOut?.name||"?");
   m.live.log.push({pid:inPid,action:"sub",pts:0,q:m.live.q,clockAt:m.live.clockSec,desc});
   save();
   _tmOutPid=null;
@@ -1250,7 +1266,7 @@ function autoBackup(){
 
 function exportBackup(){
   const filename=`kortline-backup-${td()}.json`;
-  const data={version:"1.6.14",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
+  const data={version:"1.6.15",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
   const json=JSON.stringify(data,null,2);
   const blob=new Blob([json],{type:"application/json"});
   // Descarga directa
@@ -1530,7 +1546,7 @@ function _buildStatsCharts(){
   if(playersEl&&players.length){
     const pStats=players.map(p=>{
       const c=_countAtt(p,allSess);
-      return{name:p.name.split(" ")[0],num:p.number,pct:c.tot>0?pc(c.pr+c.la,c.tot):0,tot:c.tot};
+      return{name:_shortName(p.name),num:p.number,pct:c.tot>0?pc(c.pr+c.la,c.tot):0,tot:c.tot};
     }).sort((a,b)=>b.pct-a.pct);
     _charts.players=new Chart(playersEl,{
       type:"bar",
@@ -2999,7 +3015,7 @@ function openClubSettings(){
       <div class="stg-sec-title">ℹ️ Acerca de</div>
       <div style="text-align:center;padding:18px 0 6px">
         <img src="${_FULL_SVG_URL}" style="height:36px;max-width:100%;opacity:0.9;margin-bottom:10px"/>
-        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.6.14 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
+        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.6.15 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
       </div>
     </div>
     <button class="btn-p" onclick="saveClubSettings()">Guardar configuración</button>
@@ -4655,7 +4671,7 @@ function liveGame(){
       return`<button class="court-card ${isSel?"sel":""} ${disq&&!isSel?"disq":""}" onclick="selectLivePid('${p.id}')">
         <div style="font-size:9px;font-weight:700;color:${isSel?"var(--orange)":"var(--td)"};margin-bottom:2px">#${p.number||"?"}</div>
         <div style="font-family:var(--font-d);font-weight:900;font-size:28px;line-height:1;color:${isSel?"var(--orange)":"var(--tx)"}">${pts}</div>
-        <div style="font-size:11px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70px;margin:3px auto 2px;color:${isSel?"var(--orange)":"var(--td)"}">${esc(p.name.split(" ")[0])}</div>
+        <div style="font-size:11px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70px;margin:3px auto 2px;color:${isSel?"var(--orange)":"var(--td)"}">${esc(_shortName(p.name))}</div>
         <div style="font-size:12px;font-weight:800;min-height:14px;color:${fc};letter-spacing:-1px">${foulDots||""}</div>
       </button>`;
     }).join("");
@@ -4678,7 +4694,7 @@ function liveGame(){
       return`<button class="court-card ${isSel?"sel":""} ${disq&&!isSel?"disq":""}" onclick="selectLivePid('${p.id}')" style="${isSel?"border-color:#ef4444":""}">${""}
         <div style="font-size:9px;font-weight:700;color:${isSel?"#ef4444":"var(--td)"};margin-bottom:2px">#${p.number||"?"}</div>
         <div style="font-family:var(--font-d);font-weight:900;font-size:28px;line-height:1;color:${isSel?"#ef4444":"var(--tx)"}">${pts}</div>
-        <div style="font-size:11px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70px;margin:3px auto 2px;color:${isSel?"#ef4444":"var(--td)"}">${esc(p.name.split(" ")[0])}</div>
+        <div style="font-size:11px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70px;margin:3px auto 2px;color:${isSel?"#ef4444":"var(--td)"}">${esc(_shortName(p.name))}</div>
         <div style="font-size:12px;font-weight:800;min-height:14px;color:${fc};letter-spacing:-1px">${foulDots||""}</div>
       </button>`;
     }).join("");
@@ -4773,7 +4789,8 @@ function liveGame(){
       <!-- Otros -->
       <div style="padding:10px 10px 10px">
         <div style="font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#06b6d4;margin-bottom:7px">🎯 OTROS</div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:4px">
+        <!-- OTROS: solo asistencia, robo, tapón, pérdida (v1.6.15) -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px">
           <button class="action-btn" onclick="liveAction('${selPid}','ast',0)" style="border-color:#06b6d455;background:#06b6d412;color:#06b6d4;padding:8px 2px">
             <div style="font-size:15px;font-weight:900">AST</div>
             <div style="font-size:9px;margin-top:2px">Asist</div>
@@ -4791,22 +4808,33 @@ function liveGame(){
             <div style="font-size:9px;margin-top:2px">Pérdida</div>
           </button>
         </div>
-        <!-- Faltas (v1.6.13): personal, técnica, antideportiva, descalificante -->
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px">
-          <button class="action-btn" onclick="liveAction('${selPid}','foul',0)" style="border-color:#f59e0b55;background:#f59e0b12;color:#f59e0b;padding:8px 2px">
-            <div style="font-size:14px;font-weight:900">FALT</div>
+      </div>
+      <!-- 🤚 FALTAS: caja propia con título y badge dinámico (v1.6.15) -->
+      <div style="padding:10px 10px 10px;border-top:1px solid var(--border);background:rgba(245,158,11,.04)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px">
+          <div style="font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#f59e0b">🤚 Faltas</div>
+          ${(()=>{
+            const tf=teamFouls;
+            if(tf>=5)return`<span style="background:rgba(34,197,94,.18);color:#22c55e;border:1px solid rgba(34,197,94,.45);border-radius:6px;font-size:10px;font-weight:800;padding:2px 7px">F:${tf} · BONUS</span>`;
+            if(tf===4)return`<span style="background:rgba(245,158,11,.2);color:#f59e0b;border:1px solid rgba(245,158,11,.4);border-radius:6px;font-size:10px;font-weight:800;padding:2px 7px">F:4/4 · PRÓX BONUS</span>`;
+            return`<span style="background:var(--s3);color:var(--td);border:1px solid var(--border);border-radius:6px;font-size:10px;font-weight:700;padding:2px 7px">F:${tf}/4</span>`;
+          })()}
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+          <button class="action-btn" onclick="liveAction('${selPid}','foul',0)" style="border-color:#f59e0b66;background:#f59e0b14;color:#f59e0b;padding:10px 4px" title="Falta personal">
+            <div style="font-size:15px;font-weight:900">FALT</div>
             <div style="font-size:9px;margin-top:2px">Personal</div>
           </button>
-          <button class="action-btn" onclick="liveAction('${selPid}','ftech',0)" style="border-color:#ef444488;background:#ef444418;color:#ef4444;padding:8px 2px">
-            <div style="font-size:14px;font-weight:900">TÉC</div>
+          <button class="action-btn" onclick="liveAction('${selPid}','ftech',0)" style="border-color:#ef444488;background:#ef444418;color:#ef4444;padding:10px 4px" title="Técnica — 1 TL + posesión">
+            <div style="font-size:15px;font-weight:900">TÉC</div>
             <div style="font-size:9px;margin-top:2px">Técnica</div>
           </button>
-          <button class="action-btn" onclick="liveAction('${selPid}','funsport',0)" style="border-color:#ef444488;background:#ef444418;color:#ef4444;padding:8px 2px" title="Antideportiva — 2 TL + posesión">
-            <div style="font-size:14px;font-weight:900">ANT</div>
+          <button class="action-btn" onclick="liveAction('${selPid}','funsport',0)" style="border-color:#ef444488;background:#ef444418;color:#ef4444;padding:10px 4px" title="Antideportiva — 2 TL + posesión">
+            <div style="font-size:15px;font-weight:900">ANT</div>
             <div style="font-size:9px;margin-top:2px">Antidep.</div>
           </button>
-          <button class="action-btn" onclick="liveAction('${selPid}','fdq',0)" style="border-color:#dc2626;background:#dc262625;color:#fca5a5;padding:8px 2px" title="Descalificante — expulsión inmediata">
-            <div style="font-size:14px;font-weight:900">DESC</div>
+          <button class="action-btn" onclick="liveAction('${selPid}','fdq',0)" style="border-color:#dc2626;background:#dc262625;color:#fca5a5;padding:10px 4px" title="Descalificante — expulsión inmediata">
+            <div style="font-size:15px;font-weight:900">DESC</div>
             <div style="font-size:9px;margin-top:2px">Descalif.</div>
           </button>
         </div>
@@ -4824,7 +4852,7 @@ function liveGame(){
         return`<div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:8px 10px;display:flex;align-items:center;gap:8px;min-width:120px">
           <div style="font-family:var(--font-d);font-weight:900;font-size:20px;line-height:1">${pts}</div>
           <div style="flex:1;min-width:0">
-            <div style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">#${p.number||"?"} ${esc(p.name.split(" ")[0])}</div>
+            <div style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">#${p.number||"?"} ${esc(_shortName(p.name))}</div>
             <div style="font-size:11px;color:${fc}">${"●".repeat(Math.min(fouls,5))||"Sin faltas"}</div>
           </div>
           ${onCourt.length<5?
@@ -4856,7 +4884,7 @@ function liveGame(){
       s+="<div style='background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:8px 10px;display:flex;align-items:center;gap:8px;min-width:120px'>"
         +"<div style='font-family:var(--font-d);font-weight:900;font-size:20px;line-height:1'>"+pts+"</div>"
         +"<div style='flex:1;min-width:0'>"
-          +"<div style='font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'>#"+(p.number||"?")+" "+esc(p.name.split(" ")[0])+"</div>"
+          +"<div style='font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'>#"+(p.number||"?")+" "+esc(_shortName(p.name))+"</div>"
           +"<div style='font-size:11px;color:"+fc+"'>"+("●".repeat(Math.min(fouls,5))||"Sin faltas")+"</div>"
         +"</div>"+subBtn+"</div>";
     });
@@ -4900,7 +4928,7 @@ function liveGame(){
             ${[...entries].reverse().map(({e,realIdx})=>{
               const pdata=convP.find(p=>p.id===e.pid);
               const isRivalEntry=e.pid==="rival"||e.pid==="rival-to";
-              const pname=isRivalEntry?(m.rival||"Rival"):e.pid==="team"?"Equipo":(pdata?pdata.name.split(" ")[0]:"?");
+              const pname=isRivalEntry?(m.rival||"Rival"):e.pid==="team"?"Equipo":(pdata?_shortName(pdata.name):"?");
               const pnum=isRivalEntry?"R":e.pid==="team"?"T":(pdata?.number||"?");
               const ac=isRivalEntry?"#ef4444":(_ACTCOLOR[e.action]||"var(--td)");
               const al=_ACTLABELS[e.action]||e.action;
@@ -4942,7 +4970,7 @@ function liveGame(){
           return`<tr style="background:${inPista?"rgba(240,99,24,.06)":i%2?"rgba(255,255,255,.015)":"transparent"}">
             <td style="font-weight:700;color:var(--td)">${p.number||"?"}</td>
             <td style="font-weight:600;white-space:nowrap;color:${inPista?"var(--tx)":"var(--td)"}">
-              ${esc(p.name.split(" ")[0])}${inPista?`<span style="font-size:9px;color:var(--td);margin-left:3px">▶</span>`:""}
+              ${esc(_shortName(p.name))}${inPista?`<span style="font-size:9px;color:var(--td);margin-left:3px">▶</span>`:""}
             </td>
             <td style="font-weight:700;color:var(--tx)">${pts}</td>
             <td>${st.p2m||0}/${t2a}</td><td>${st.p3m||0}/${t3a}</td>
@@ -4985,7 +5013,7 @@ function liveGame(){
       const t2a=(st.p2m||0)+(st.p2a||0),t3a=(st.p3m||0)+(st.p3a||0),t1a=(st.p1m||0)+(st.p1a||0);
       rows+="<tr style='background:"+(inPista?"rgba(239,68,68,.06)":i%2?"rgba(255,255,255,.015)":"transparent")+"'>"
         +"<td style='font-weight:700;color:var(--td)'>"+(p.number||"?")+"</td>"
-        +"<td style='font-weight:600;white-space:nowrap;color:"+(inPista?"var(--tx)":"var(--td)")+"'>"+esc(p.name.split(" ")[0])+(inPista?"<span style='font-size:9px;color:var(--td);margin-left:3px'>▶</span>":"")+"</td>"
+        +"<td style='font-weight:600;white-space:nowrap;color:"+(inPista?"var(--tx)":"var(--td)")+"'>"+esc(_shortName(p.name))+(inPista?"<span style='font-size:9px;color:var(--td);margin-left:3px'>▶</span>":"")+"</td>"
         +"<td style='font-weight:700;color:var(--tx)'>"+pts+"</td>"
         +"<td>"+st.p2m+"/"+(t2a)+"</td><td>"+st.p3m+"/"+(t3a)+"</td>"
         +"<td>"+st.p1m+"/"+(t1a)+"</td>"
@@ -5261,11 +5289,15 @@ function liveAction(pid,action,pts){
   if(pts>0)live.qScores[qi][0]=(live.qScores[qi][0]||0)+pts;
   if(action==="foul"||action==="ftech"||action==="funsport"||action==="fdq"){if(!live.teamFouls)live.teamFouls=[0,0,0,0,0];live.teamFouls[qi]=(live.teamFouls[qi]||0)+1;}
   }
-  const pname=(pl(S.teamId).find(p=>p.id===pid)?.name||"?").split(" ")[0];
+  const pname=_shortName(pl(S.teamId).find(p=>p.id===pid)?.name||"?");
   const isFoulAction=(action==="foul"||action==="ftech"||action==="funsport"||action==="fdq");
   if(isFoulAction){
     // v1.6.13 · B-38: parar reloj con falta si el partido lo tiene activado
-    if(m.stopOnFoul&&live.clockRunning){live.clockRunning=false;clearInterval(_liveTimer);_liveTimer=null;}
+    if(m.stopOnFoul&&live.clockRunning){
+      live.clockRunning=false;clearInterval(_liveTimer);_liveTimer=null;
+      // v1.6.15: aviso sutil para que el anotador sepa que el reloj se ha parado
+      toast("⏱ Reloj parado por falta");
+    }
     const _m2=mById(S.teamId,S.matchId);
     const _rp=_m2?.rivalPlayers||[];
     const isTechLike=(action==="ftech"||action==="funsport"||action==="fdq");
@@ -5287,19 +5319,26 @@ function liveAction(pid,action,pts){
 function openFoulTLModal(foulerPid, isTech, foulKind){
   const m=mById(S.teamId,S.matchId);if(!m)return;
   const live=m.live||{};
-  const foulerName=(pl(S.teamId).find(p=>p.id===foulerPid)?.name||"?").split(" ")[0];
+  const foulerName=_shortName(pl(S.teamId).find(p=>p.id===foulerPid)?.name||"?");
   const rivalPlayers=m.rivalPlayers||[];
   document.getElementById("m-foultl")?.remove();
 
-  // v1.6.13 · B-51: Default de TL según tipo de falta (FIBA 2024-25):
-  // - personal en bonus / lanzamiento de 2: 2 TL
-  // - técnica: 1 TL + posesión
-  // - antideportiva / descalificante: 2 TL + posesión
-  let defaultTL=2;
+  // v1.6.15 · F1: Default de TL inteligente según contexto.
+  // - foul (personal): si el equipo NO está en bonus → 0 (el común: cambio de
+  //   posesión sin TL); si está en bonus → 2 TL.
+  // - ftech (técnica): 1 TL + posesión (FIBA 2024-25).
+  // - funsport (antideportiva) / fdq (descalificante): 2 TL + posesión.
+  // teamFouls del cuarto actual ya incluye la falta que acabas de pulsar.
+  const _curQ=(live.q||1)-1;
+  const _tFouls=(live.teamFouls||[])[_curQ]||0;
+  const _inBonus=_tFouls>=5;
+  let defaultTL=0;
   if(foulKind==="ftech")defaultTL=1;
   else if(foulKind==="funsport"||foulKind==="fdq")defaultTL=2;
-  else if(isTech)defaultTL=1;
+  else if(foulKind==="foul"||!foulKind)defaultTL=_inBonus?2:0;
+  else if(isTech)defaultTL=1; // retrocompat por si llega isTech sin foulKind
   const foulLabel=foulKind==="ftech"?" (técnica)":foulKind==="funsport"?" (antideportiva)":foulKind==="fdq"?" (descalificante)":isTech?" (técnica)":"";
+  const bonusBanner=_inBonus&&(foulKind==="foul"||!foulKind)?`<div style="background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4);color:#22c55e;border-radius:9px;padding:9px 12px;margin-bottom:12px;font-size:13px;font-weight:700;text-align:center">⚠️ BONUS · esta falta tira 2 TL</div>`:"";
 
   const playerRows=rivalPlayers.length===0
     ?`<div style="font-size:13px;color:var(--tm);padding:12px 0;text-align:center">Sin jugadores del rival registrados.<br/>Añádelos en la convocatoria.</div>`
@@ -5319,6 +5358,7 @@ function openFoulTLModal(foulerPid, isTech, foulKind){
     <div class="mhandle"></div>
     <div class="mtitle">🏀 Tiros libres</div>
     <div class="msub">Falta de <b style="color:var(--orange)">${foulerName}</b>${foulLabel} — ¿a quién le tiran?</div>
+    ${bonusBanner}
 
     <div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--td);margin-bottom:8px">JUGADOR RIVAL FOULED</div>
     <div id="foultl-players">${playerRows}</div>
@@ -5464,7 +5504,10 @@ function liveTeamAction(action, pts){
     if(!live.teamFouls)live.teamFouls=[0,0,0,0,0];
     live.teamFouls[qi]=(live.teamFouls[qi]||0)+1;
     // Parada de reloj con falta (v1.6.13 · B-38) si el partido lo tiene activado
-    if(m.stopOnFoul&&live.clockRunning){live.clockRunning=false;clearInterval(_liveTimer);_liveTimer=null;}
+    if(m.stopOnFoul&&live.clockRunning){
+      live.clockRunning=false;clearInterval(_liveTimer);_liveTimer=null;
+      toast("⏱ Reloj parado por falta");
+    }
     // Trigger rival TL picker
     const _rp=m.rivalPlayers||[];
     const isTech=(action==="ftech"||action==="funsport"||action==="fdq");
@@ -5482,14 +5525,20 @@ function liveTeamAction(action, pts){
 function openTeamTLModal(foulerPid, isTech, foulKind){
   const m=mById(S.teamId,S.matchId);if(!m)return;
   const isFoulerTeam=foulerPid==="team";
-  const foulerName=isFoulerTeam?"(equipo)":(pl(S.teamId).find(p=>p.id===foulerPid)?.name||"?").split(" ")[0];
+  const foulerName=isFoulerTeam?"(equipo)":_shortName(pl(S.teamId).find(p=>p.id===foulerPid)?.name||"?");
   document.getElementById("m-teamtl")?.remove();
-  // v1.6.13 · B-51: defaults según tipo
-  let defaultTL=2;
+  // v1.6.15 · F1: default TL inteligente según contexto
+  const _live=m.live||{};
+  const _curQ=(_live.q||1)-1;
+  const _tFouls=(_live.teamFouls||[])[_curQ]||0;
+  const _inBonus=_tFouls>=5;
+  let defaultTL=0;
   if(foulKind==="ftech")defaultTL=1;
   else if(foulKind==="funsport"||foulKind==="fdq")defaultTL=2;
+  else if(foulKind==="foul"||!foulKind)defaultTL=_inBonus?2:0;
   else if(isTech)defaultTL=1;
   const foulLabel=foulKind==="ftech"?" (técnica)":foulKind==="funsport"?" (antideportiva)":foulKind==="fdq"?" (descalificante)":isTech?" (técnica)":"";
+  const bonusBanner=_inBonus&&(foulKind==="foul"||!foulKind)?`<div style="background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4);color:#22c55e;border-radius:9px;padding:9px 12px;margin-bottom:12px;font-size:13px;font-weight:700;text-align:center">⚠️ BONUS · esta falta tira 2 TL</div>`:"";
   const el=document.createElement("div");
   el.id="m-teamtl";
   el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:flex-end;justify-content:center;";
@@ -5499,6 +5548,7 @@ function openTeamTLModal(foulerPid, isTech, foulKind){
     <div class="mhandle"></div>
     <div class="mtitle">🏀 Tiros libres del rival</div>
     <div class="msub">Falta de <b style="color:var(--orange)">${foulerName}</b>${foulLabel}</div>
+    ${bonusBanner}
     <div style="background:rgba(249,115,22,.07);border:1px dashed rgba(249,115,22,.3);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--td)">
       💡 Sin jugadores del rival registrados — se anotarán como puntos del rival
     </div>
@@ -5506,15 +5556,10 @@ function openTeamTLModal(foulerPid, isTech, foulKind){
     <div style="display:flex;gap:8px;margin-bottom:16px">
       ${[0,1,2,3].map(n=>`<button id="ttl-n${n}" onclick="setTeamTLCount(${n})" style="flex:1;padding:12px 0;border-radius:9px;border:${n===defaultTL?"2px solid var(--orange);background:rgba(249,115,22,.15);color:var(--orange)":"1px solid var(--border);background:var(--s2);color:var(--td)"};font-weight:900;font-size:16px;cursor:pointer">${n===0?"Sin TL":n+" TL"}</button>`).join("")}
     </div>
-    <div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--td);margin-bottom:8px">¿CUÁNTOS ENTRAN?</div>
-    <div style="display:flex;gap:8px;margin-bottom:16px" id="ttl-makes-row">
-      ${[0,1,2,3].map(n=>`<button id="ttl-m${n}" onclick="setTeamTLMakes(${n})" style="flex:1;padding:12px 0;border-radius:9px;border:1px solid var(--border);background:var(--s2);color:var(--td);font-weight:900;font-size:16px;cursor:pointer">${n}</button>`).join("")}
-    </div>
-    <button class="btn-p" id="ttl-confirm" onclick="confirmTeamTL()">Confirmar</button>
-    <button class="btn-s" onclick="document.getElementById('m-teamtl').remove()">Saltar</button>
+    <button class="btn-p" id="ttl-confirm" onclick="confirmTeamTL()">${defaultTL===0?"Confirmar (sin TL)":"Continuar — marcar tiros"}</button>
+    <button class="btn-s" onclick="document.getElementById('m-teamtl').remove()">Saltar sin asignar</button>
   </div>`;
   document.body.appendChild(el);
-  el._makes=0;
 }
 
 window.setTeamTLCount=function(n){
@@ -5524,27 +5569,68 @@ window.setTeamTLCount=function(n){
     b.style.border=i===n?"2px solid var(--orange)":"1px solid var(--border)";
     b.style.background=i===n?"rgba(249,115,22,.15)":"var(--s2)";
     b.style.color=i===n?"var(--orange)":"var(--td)";});
-  // Update makes buttons max
-  const row=document.getElementById("ttl-makes-row");
-  if(row)row.innerHTML=[0,1,2,3].filter(i=>i<=n).map(i=>`<button id="ttl-m${i}" onclick="setTeamTLMakes(${i})" style="flex:1;padding:12px 0;border-radius:9px;border:${i===(document.getElementById('m-teamtl')?._makes||0)?"2px solid var(--orange);background:rgba(249,115,22,.15);color:var(--orange)":"1px solid var(--border);background:var(--s2);color:var(--td)"};font-weight:900;font-size:16px;cursor:pointer">${i}</button>`).join("");
-};
-window.setTeamTLMakes=function(n){
-  const el=document.getElementById("m-teamtl");if(!el)return;
-  el._makes=n;
-  const tl=el._tl||2;
-  [0,1,2,3].filter(i=>i<=tl).forEach(i=>{const b=document.getElementById("ttl-m"+i);if(!b)return;
-    b.style.border=i===n?"2px solid var(--orange)":"1px solid var(--border)";
-    b.style.background=i===n?"rgba(249,115,22,.15)":"var(--s2)";
-    b.style.color=i===n?"var(--orange)":"var(--td)";});
+  // Actualizar texto del botón confirmar
+  const cb=document.getElementById("ttl-confirm");
+  if(cb)cb.textContent=n===0?"Confirmar (sin TL)":"Continuar — marcar tiros";
 };
 function confirmTeamTL(){
   const el=document.getElementById("m-teamtl");if(!el)return;
-  const made=el._makes||0;const total=el._tl||0;
+  const total=el._tl||0;
+  if(total===0){
+    el.remove();
+    toast("✅ Falta asignada, sin tiros libres");
+    return;
+  }
+  // v1.6.15: flujo unificado granular tiro a tiro
+  el.remove();
+  openTeamTLShootModal(total);
+}
+
+// Modal granular tiro a tiro para caso sin rivales registrados (v1.6.15)
+function openTeamTLShootModal(total){
+  const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
+  document.getElementById("m-teamtlshoot")?.remove();
+  const state=Array(total).fill(null); // null=sin marcar, true=entra, false=falla
+  const el=document.createElement("div");
+  el.id="m-teamtlshoot";
+  el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:flex-end;justify-content:center;";
+  el.onclick=e=>{if(e.target===el)el.remove();};
+  el._state=state;
+
+  function btnHtml(i){
+    const v=el._state[i];
+    if(v===null) return `<button onclick="setTeamTLResult(${i},true)" style="flex:1;padding:16px 0;border-radius:10px;border:1.5px dashed var(--border);background:var(--s2);color:var(--td);font-weight:900;font-size:24px;cursor:pointer">?</button>`;
+    if(v===true) return `<button onclick="setTeamTLResult(${i},false)" style="flex:1;padding:16px 0;border-radius:10px;border:1.5px solid #22c55e;background:rgba(34,197,94,.15);color:#22c55e;font-weight:900;font-size:22px;cursor:pointer">✓</button>`;
+    return `<button onclick="setTeamTLResult(${i},null)" style="flex:1;padding:16px 0;border-radius:10px;border:1.5px solid #ef4444;background:rgba(239,68,68,.12);color:#ef4444;font-weight:900;font-size:22px;cursor:pointer">✗</button>`;
+  }
+  el._render=function(){
+    const g=document.getElementById("teamtl-btns-grid");if(!g)return;
+    g.innerHTML=Array.from({length:total},(_,i)=>btnHtml(i)).join("");
+    const all=el._state.every(v=>v!==null);
+    const cb=document.getElementById("teamtl-confirm");
+    if(cb){cb.disabled=!all;cb.style.opacity=all?"1":"0.4";}
+  };
+  el.innerHTML=`<div class="modal">
+    <div class="mhandle"></div>
+    <div class="mtitle">🎯 Tiros libres del rival</div>
+    <div class="msub">${total} tiro${total>1?"s":""} — toca cada uno para marcar ✓ entra / ✗ falla.</div>
+    <div id="teamtl-btns-grid" style="display:flex;gap:8px;margin:14px 0">${Array.from({length:total},(_,i)=>btnHtml(i)).join("")}</div>
+    <button class="btn-p" id="teamtl-confirm" onclick="confirmTeamTLShoot(${total})" disabled style="opacity:.4">Confirmar</button>
+    <button class="btn-s" onclick="document.getElementById('m-teamtlshoot').remove()">Cancelar</button>
+  </div>`;
+  document.body.appendChild(el);
+}
+window.setTeamTLResult=function(i,v){
+  const el=document.getElementById("m-teamtlshoot");if(!el)return;
+  el._state[i]=v;el._render();
+};
+function confirmTeamTLShoot(total){
+  const el=document.getElementById("m-teamtlshoot");if(!el)return;
+  const made=(el._state||[]).filter(v=>v===true).length;
   const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
   const live=m.live;const qi=(live.q||1)-1;
   _ensureQSlot(live,qi);
   live.qScores[qi][1]=(live.qScores[qi][1]||0)+made;
-  const pL=m.quarters===4?"Q":"P";
   const entry={pid:"rival",action:"p1",pts:made,q:live.q,clockAt:live.clockSec,
     desc:"TL rival: "+made+"/"+total};
   live.log=[...(live.log||[]),entry].slice(-80);
@@ -5679,8 +5765,8 @@ function subPlayer(inId,outId){
   }
   m.live.selPid=null;
   save();render();
-  const pIn=(pl(S.teamId).find(p=>p.id===inId)?.name||"?").split(" ")[0];
-  const pOut=outId?(pl(S.teamId).find(p=>p.id===outId)?.name||"?").split(" ")[0]:"";
+  const pIn=_shortName(pl(S.teamId).find(p=>p.id===inId)?.name||"?");
+  const pOut=outId?_shortName(pl(S.teamId).find(p=>p.id===outId)?.name||"?"):"";
   toast(pOut?`↔ ${pIn} entra · ${pOut} sale`:`▶ ${pIn} entra a pista`);
 }
 function openRivalPlayerModal(init){
@@ -5861,7 +5947,7 @@ function openLandscapeStats(){
       const t2a=(st.p2m||0)+(st.p2a||0),t3a=(st.p3m||0)+(st.p3a||0),t1a=(st.p1m||0)+(st.p1a||0);
       return `<tr style="background:${inPista?"rgba(240,99,24,.06)":"transparent"}">
         <td style="font-weight:700;color:${accentColor};position:sticky;left:0;background:${inPista?"rgba(240,99,24,.06)":"var(--s)"}">${p.number||"?"}</td>
-        <td style="font-weight:600;position:sticky;left:28px;background:${inPista?"rgba(240,99,24,.06)":"var(--s)"}"><div style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:90px">${p.name.split(" ")[0]}</div></td>
+        <td style="font-weight:600;position:sticky;left:28px;background:${inPista?"rgba(240,99,24,.06)":"var(--s)"}"><div style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:90px">${_shortName(p.name)}</div></td>
         <td style="font-weight:900;color:${accentColor}">${pts}</td>
         <td>${st.p2m||0}/${t2a}</td><td>${st.p3m||0}/${t3a}</td><td>${st.p1m||0}/${t1a}</td>
         <td style="color:#a855f7">${st.ro||0}</td><td style="color:#9ca3af">${st.rd||0}</td>
