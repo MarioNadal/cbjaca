@@ -1589,7 +1589,7 @@ function autoBackup(){
 
 function exportBackup(){
   const filename=`kortline-backup-${td()}.json`;
-  const data={version:"1.7.5",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
+  const data={version:"1.7.6",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
   const json=JSON.stringify(data,null,2);
   const blob=new Blob([json],{type:"application/json"});
   // Descarga directa
@@ -3339,7 +3339,7 @@ function openClubSettings(){
       <div class="stg-sec-title">ℹ️ Acerca de</div>
       <div style="text-align:center;padding:18px 0 6px">
         <img src="${_FULL_SVG_URL}" style="height:36px;max-width:100%;opacity:0.9;margin-bottom:10px"/>
-        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.7.5 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
+        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.7.6 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
       </div>
     </div>
     <button class="btn-p" onclick="saveClubSettings()">Guardar configuración</button>
@@ -4550,7 +4550,7 @@ function _convSetupHtml(m,t,step){
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
       <div>
         <div style="font-weight:900;font-size:18px">👥 Nuestro equipo</div>
-        <div style="font-size:12px;color:var(--td);margin-top:2px">${convIds.length} convocados · ${titIds.length} titulares</div>
+        <div id="conv-subtitle" style="font-size:12px;color:var(--td);margin-top:2px">${convIds.length} convocados · ${titIds.length} titulares</div>
       </div>
       <div style="display:flex;gap:6px">
         <button onclick="_convSelectAll()" style="padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:var(--s2);color:var(--td);cursor:pointer;font-size:12px;font-weight:700">Todos</button>
@@ -4565,17 +4565,8 @@ function _convSetupHtml(m,t,step){
           const inConv=convIds.includes(p.id);
           const isTit=titIds.includes(p.id)&&inConv;
           const isCap=m.capitan===p.id&&inConv;
-          return`<div class="conv-row" onclick="_convToggle('${p.id}')">
-            <div class="conv-cb ${inConv?"on":""}">${inConv?"✓":""}</div>
-            <div class="pnum" style="background:linear-gradient(135deg,${t.color},${t.color}88);width:32px;height:32px;border-radius:8px;font-size:13px">${p.number||"?"}</div>
-            <div style="flex:1">
-              <div style="font-weight:600;font-size:15px">${esc(p.name)}${isCap?'<span style="background:rgba(234,179,8,.2);color:#eab308;border:1px solid rgba(234,179,8,.3);border-radius:5px;font-size:10px;font-weight:800;padding:1px 5px;margin-left:6px">(C)</span>':""}</div>
-              <div style="font-size:12px;color:var(--td)">${esc(p.position||"—")}</div>
-            </div>
-            ${inConv?`<div style="display:flex;gap:5px" onclick="event.stopPropagation()">
-              <button onclick="_convTitular('${p.id}')" style="padding:5px 9px;border-radius:6px;border:1px solid ${isTit?"rgba(240,99,24,.4)":"var(--border)"};background:${isTit?"rgba(240,99,24,.15)":"var(--s2)"};color:${isTit?"var(--orange)":"var(--td)"};cursor:pointer;font-size:12px;font-weight:700">⭐</button>
-              <button onclick="_convCapitan('${p.id}')" style="padding:5px 9px;border-radius:6px;border:1px solid ${isCap?"rgba(234,179,8,.4)":"var(--border)"};background:${isCap?"rgba(234,179,8,.15)":"var(--s2)"};color:${isCap?"#eab308":"var(--td)"};cursor:pointer;font-size:12px;font-weight:700">(C)</button>
-            </div>`:""}
+          return`<div class="conv-row" data-pid="${p.id}" onclick="_convToggle('${p.id}')">
+            ${_convRowInner(p,t,inConv,isTit,isCap)}
           </div>`;
         }).join("")}
     </div>`;
@@ -4643,6 +4634,38 @@ function _convGoStep(step){
   el.innerHTML=_convSetupHtml(m,t,step);
   el._step=step;
 }
+// v1.7.6: render in-place de una fila (sin tocar el DOM completo, mantiene scroll)
+function _convRowInner(p,t,inConv,isTit,isCap){
+  return`<div class="conv-cb ${inConv?"on":""}">${inConv?"✓":""}</div>
+    <div class="pnum" style="background:linear-gradient(135deg,${t.color},${t.color}88);width:32px;height:32px;border-radius:8px;font-size:13px">${p.number||"?"}</div>
+    <div style="flex:1">
+      <div style="font-weight:600;font-size:15px">${esc(p.name)}${isCap?'<span style="background:rgba(234,179,8,.2);color:#eab308;border:1px solid rgba(234,179,8,.3);border-radius:5px;font-size:10px;font-weight:800;padding:1px 5px;margin-left:6px">(C)</span>':""}</div>
+      <div style="font-size:12px;color:var(--td)">${esc(p.position||"—")}</div>
+    </div>
+    ${inConv?`<div style="display:flex;gap:5px" onclick="event.stopPropagation()">
+      <button onclick="_convTitular('${p.id}')" style="padding:5px 9px;border-radius:6px;border:1px solid ${isTit?"rgba(240,99,24,.4)":"var(--border)"};background:${isTit?"rgba(240,99,24,.15)":"var(--s2)"};color:${isTit?"var(--orange)":"var(--td)"};cursor:pointer;font-size:12px;font-weight:700">⭐</button>
+      <button onclick="_convCapitan('${p.id}')" style="padding:5px 9px;border-radius:6px;border:1px solid ${isCap?"rgba(234,179,8,.4)":"var(--border)"};background:${isCap?"rgba(234,179,8,.15)":"var(--s2)"};color:${isCap?"#eab308":"var(--td)"};cursor:pointer;font-size:12px;font-weight:700">(C)</button>
+    </div>`:""}`;
+}
+function _convRefreshRow(pid){
+  const m=mById(S.teamId,S.matchId);
+  const t=S.teams.find(x=>x.id===S.teamId);
+  if(!m||!t)return;
+  const row=document.querySelector(`#m-conv-setup [data-pid="${pid}"]`);
+  if(!row)return;
+  const p=pl(S.teamId).find(pp=>pp.id===pid);if(!p)return;
+  const convIds=m.convocados||[];
+  const titIds=m.titulares||[];
+  const inConv=convIds.includes(pid);
+  const isTit=titIds.includes(pid)&&inConv;
+  const isCap=m.capitan===pid&&inConv;
+  row.innerHTML=_convRowInner(p,t,inConv,isTit,isCap);
+}
+function _convRefreshHeader(){
+  const m=mById(S.teamId,S.matchId);if(!m)return;
+  const sub=document.getElementById("conv-subtitle");
+  if(sub)sub.textContent=`${(m.convocados||[]).length} convocados · ${(m.titulares||[]).length} titulares`;
+}
 function _convToggle(pid){
   const m=mById(S.teamId,S.matchId);if(!m)return;
   if(!m.convocados)m.convocados=[];
@@ -4655,9 +4678,9 @@ function _convToggle(pid){
     m.convocados.push(pid);
   }
   save();
-  const t=S.teams.find(x=>x.id===S.teamId);
-  const el=document.getElementById("m-conv-setup");if(!el)return;
-  el.innerHTML=_convSetupHtml(m,t,el._step||0);
+  // v1.7.6: refresh in-place sin perder scroll
+  _convRefreshRow(pid);
+  _convRefreshHeader();
 }
 function _convTitular(pid){
   const m=mById(S.teamId,S.matchId);if(!m)return;
@@ -4665,17 +4688,17 @@ function _convTitular(pid){
   if(m.titulares.includes(pid)){m.titulares=m.titulares.filter(x=>x!==pid);}
   else{if(m.titulares.length>=5)return toast("⚠️ Máximo 5 titulares");m.titulares.push(pid);}
   save();
-  const t=S.teams.find(x=>x.id===S.teamId);
-  const el=document.getElementById("m-conv-setup");if(!el)return;
-  el.innerHTML=_convSetupHtml(m,t,el._step||0);
+  _convRefreshRow(pid);
+  _convRefreshHeader();
 }
 function _convCapitan(pid){
   const m=mById(S.teamId,S.matchId);if(!m)return;
+  const prev=m.capitan;
   m.capitan=m.capitan===pid?null:pid;
   save();
-  const t=S.teams.find(x=>x.id===S.teamId);
-  const el=document.getElementById("m-conv-setup");if(!el)return;
-  el.innerHTML=_convSetupHtml(m,t,el._step||0);
+  // Refrescar tanto la fila tocada como la del capitán anterior (si había otro)
+  _convRefreshRow(pid);
+  if(prev&&prev!==pid)_convRefreshRow(prev);
 }
 function _convSelectAll(){
   const m=mById(S.teamId,S.matchId);if(!m)return;

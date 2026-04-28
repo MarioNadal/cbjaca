@@ -9,7 +9,25 @@ Repositorio: [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/
 
 ## Historial de versiones
 
-### v1.7.5 — Sustitución forzosa tras descalificación _(actual)_
+### v1.7.6 — Convocatoria sin saltos al seleccionar _(actual)_
+
+**Bug.** En el modal de convocatoria de partido (📋 ¿Quién juega?), cada toque sobre un jugador disparaba `_convToggle` → `save()` → reescribía todo el `innerHTML` del modal con `_convSetupHtml(...)`. Resultado: la lista se "redibujaba" y el scroll volvía al principio. Especialmente molesto al elegir jugadores del final (los del banquillo con dorsales altos).
+
+**Fix.** Refresh **in-place** de la fila tocada en lugar de redibujar el modal:
+
+- Helper `_convRowInner(p,t,inConv,isTit,isCap)` que devuelve el HTML interno de una fila (checkbox + dorsal + nombre + botones laterales).
+- `_convRefreshRow(pid)` busca `[data-pid="${pid}"]` en el modal y reescribe solo su `innerHTML`.
+- `_convRefreshHeader()` actualiza el contador `X convocados · Y titulares` en el subtítulo.
+
+`_convToggle`, `_convTitular` y `_convCapitan` ya no llaman a `_convSetupHtml`. Solo refrescan la fila tocada (y la del capitán anterior cuando se cambia el capitán). El scroll se mantiene exactamente donde estaba.
+
+**Otras combinadas en este release.**
+
+Esta versión también consolida los cambios de v1.7.5 (sustitución forzosa tras descalificación) y v1.7.4 (shot chart sin coordenadas inconsistentes) si aún no estaban arriba.
+
+---
+
+### v1.7.5 — Sustitución forzosa tras descalificación
 
 **Reglamento FIBA:** un jugador descalificado **no puede seguir en pista**. Antes la app marcaba al DQ con borde rojo en su card pero permitía que siguiera registrando acciones — incoherente con el reglamento.
 
