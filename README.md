@@ -9,7 +9,74 @@ Repositorio: [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/
 
 ## Historial de versiones
 
-### v1.7.9 — Auditoría regresión: bloqueo de cuartos futuros + "Continuar" desde la 1ª vez _(actual)_
+### v1.8.0 — Estadísticas avanzadas y pantalla completa por giro _(actual)_
+
+Release mayor en estadísticas. Cuatro métricas nuevas (MIN, +/-, EFF, eFG%) y simplificación del modo pantalla completa.
+
+**Minutos jugados (MIN)**
+
+Cada jugador acumula los segundos que ha estado en pista. La columna **MIN** se calcula vía:
+
+- `live.inSince[pid]` — tiempo absoluto del juego en el momento en que entró a pista.
+- `live.minTracked[pid]` — segundos acumulados de stints anteriores.
+- `_absSec(m)` calcula el tiempo absoluto del juego en cualquier momento (cuartos pasados × qMins + tiempo transcurrido del cuarto actual). Cubre prórrogas (5 min/OT).
+
+Hooks de tracking añadidos en `subPlayer`, `_tmPickIn` (sub durante TM), `_doDQSub` (sub forzoso tras DQ) y la inicialización del live (titulares entran en `absSec=0`).
+
+Migración de partidos viejos sin tracking: al entrar al live se asume que los `onCourt` actuales están desde el inicio (`inSince=0`). Pierde la precisión de subs pasados pero no rompe.
+
+**Plus / Minus (+/-)**
+
+Diferencia de marcador (nuestro − rival) acumulada mientras el jugador está en pista. Mismo patrón que MIN: `plusMinusBaseline[pid]` (diff cuando entró) y `plusMinusTracked[pid]` (acumulado). Se actualiza al cambiar onCourt.
+
+Color: verde si positivo, rojo si negativo, gris si 0.
+
+**Eficiencia FEB (EFF / valoración)**
+
+Fórmula:
+
+```
+EFF = pts + (RO + RD) + AST + ROB + TAP − fallados − pérdidas − faltas
+```
+
+Donde `fallados = p1a + p2a + p3a` y `faltas = total (personal + técnica + antideportiva + descalificante)`.
+
+Versión simplificada — la fórmula oficial FEB también suma faltas recibidas y resta tapones recibidos, pero esos campos no se trackean. Aproxima al PIR de Euroliga.
+
+**eFG% — porcentaje de tiro efectivo**
+
+```
+eFG% = (p2m + 1.5 × p3m) / intentos_de_campo × 100
+```
+
+Más justo que `FG%` plano porque pondera triples (valen 1,5×).
+
+**Pantalla completa solo por giro de móvil**
+
+Eliminado el botón **📊 Pantalla completa** y el `.rotate-hint` clicable. Ahora la pantalla completa se activa **únicamente al girar el móvil a horizontal** (listener `orientationchange` que ya existía desde antes). Al volver a vertical se cierra automáticamente.
+
+Ventajas:
+- Ya no hay un botón cuyo "atrás" quedaba detrás de la barra de notificaciones.
+- Más simple — el comportamiento es predecible, sin dos formas de activarlo.
+- En portrait el header queda más limpio (solo el badge "🔄 gira el móvil para verla completa" indicativo).
+
+**Tabla landscape con las 4 columnas nuevas**
+
+El `buildTable` de `openLandscapeStats` ahora muestra:
+
+```
+# · Jugador · MIN · PTS · T2 · T3 · TL · eFG% · RO · RD · AST · F · ROB · TAP · PER · +/- · EFF
+```
+
+Totales en la última fila con eFG% y EFF agregados. La columna F ahora usa `_totalFouls` (suma todas las modalidades, antes era solo `foul`).
+
+**Otros**
+
+- En la tabla, los rivales muestran "—" en MIN y +/- (no se trackea porque el rival cambia de jugadores sin que la app lo sepa).
+
+---
+
+### v1.7.9 — Auditoría regresión: bloqueo de cuartos futuros + "Continuar" desde la 1ª vez
 
 Tras una auditoría completa del README desde v1.6.0 a v1.7.8 se detectaron **dos features de v1.6.0 que se habían caído** entre versiones intermedias. Ambas restauradas en este release.
 

@@ -616,6 +616,112 @@ function _totalFouls(st){
 }
 
 /* ═══════════════════════════════════════
+   STATS AVANZADAS DEL LIVE GAME (v1.8.0)
+   - Minutos jugados (MIN)
+   - Plus-minus (+/-)
+   - Eficiencia FEB (EFF)
+   - eFG% — porcentaje de tiro efectivo
+═══════════════════════════════════════ */
+
+// Tiempo absoluto del juego en segundos desde el inicio (q=1, clockSec=qMins*60).
+// Avanza monótonamente con el reloj y el cambio de cuartos/OT.
+function _absSec(m){
+  if(!m||!m.live)return 0;
+  const live=m.live;
+  const q=live.q||1;
+  const clockSec=live.clockSec||0;
+  const nQ=m.quarters||4;
+  const qMins=m.qMins||10;
+  let total=0;
+  for(let i=1;i<q;i++){
+    if(i<=nQ)total+=qMins*60;
+    else total+=5*60; // OT siempre 5 min
+  }
+  const curMaxSec=q<=nQ?qMins*60:5*60;
+  total+=Math.max(0,curMaxSec-clockSec);
+  return total;
+}
+
+// Diferencia de marcador (nuestro - rival) en cualquier momento
+function _scoreDiff(m){
+  const qs=m?.live?.qScores||[];
+  const our=qs.reduce((s,q)=>s+(q[0]||0),0);
+  const riv=qs.reduce((s,q)=>s+(q[1]||0),0);
+  return our-riv;
+}
+
+// Minutos jugados por un jugador (en segundos)
+function _getMinSec(m,pid){
+  const live=m?.live;if(!live)return 0;
+  let total=(live.minTracked&&live.minTracked[pid])||0;
+  if(live.inSince&&live.inSince[pid]!=null){
+    total+=Math.max(0,_absSec(m)-live.inSince[pid]);
+  }
+  return total;
+}
+
+// Formato MM:SS para tabla
+function _fmtMin(secs){
+  const mm=Math.floor(secs/60);
+  const ss=Math.floor(secs%60);
+  return mm+":"+(ss<10?"0":"")+ss;
+}
+
+// Plus-minus de un jugador
+function _getPlusMinus(m,pid){
+  const live=m?.live;if(!live)return 0;
+  let total=(live.plusMinusTracked&&live.plusMinusTracked[pid])||0;
+  if(live.plusMinusBaseline&&live.plusMinusBaseline[pid]!=null){
+    total+=_scoreDiff(m)-live.plusMinusBaseline[pid];
+  }
+  return total;
+}
+
+// Eficiencia FEB simplificada (sin faltas recibidas ni tapones recibidos por no trackearse)
+// EFF = pts + (ro+rd) + ast + stl + blk - intentos_fallados - perdidas - faltas_cometidas
+function _calcEFF(st){
+  if(!st)return 0;
+  const pts=(st.p1m||0)+(st.p2m||0)*2+(st.p3m||0)*3;
+  const reb=(st.ro||0)+(st.rd||0);
+  const fallados=(st.p1a||0)+(st.p2a||0)+(st.p3a||0);
+  const fouls=_totalFouls(st);
+  return pts+reb+(st.ast||0)+(st.stl||0)+(st.blk||0)-fallados-(st.to||0)-fouls;
+}
+
+// eFG% = (p2m + 1.5*p3m) / (p2m + p2a + p3m + p3a) * 100
+function _calcEFGPct(st){
+  if(!st)return 0;
+  const made=(st.p2m||0)+1.5*(st.p3m||0);
+  const att=(st.p2m||0)+(st.p2a||0)+(st.p3m||0)+(st.p3a||0);
+  if(att===0)return 0;
+  return Math.round(100*made/att);
+}
+
+// Hooks de tracking — registra entrada a pista
+function _trackEnter(m,pid){
+  const live=m?.live;if(!live)return;
+  if(!live.inSince)live.inSince={};
+  if(!live.plusMinusBaseline)live.plusMinusBaseline={};
+  live.inSince[pid]=_absSec(m);
+  live.plusMinusBaseline[pid]=_scoreDiff(m);
+}
+
+// Hooks de tracking — registra salida de pista (suma deltas)
+function _trackExit(m,pid){
+  const live=m?.live;if(!live||!live.inSince)return;
+  if(!live.minTracked)live.minTracked={};
+  if(!live.plusMinusTracked)live.plusMinusTracked={};
+  if(live.inSince[pid]!=null){
+    live.minTracked[pid]=(live.minTracked[pid]||0)+Math.max(0,_absSec(m)-live.inSince[pid]);
+    delete live.inSince[pid];
+  }
+  if(live.plusMinusBaseline&&live.plusMinusBaseline[pid]!=null){
+    live.plusMinusTracked[pid]=(live.plusMinusTracked[pid]||0)+(_scoreDiff(m)-live.plusMinusBaseline[pid]);
+    delete live.plusMinusBaseline[pid];
+  }
+}
+
+/* ═══════════════════════════════════════
    SUSTITUCIÓN FORZOSA TRAS DESCALIFICACIÓN (v1.7.5)
    Cuando un jugador alcanza el umbral de descalificación (5 personales /
    2 técnicas / 2 antideportivas / 1+1 / 1 descalificante), si está en
@@ -721,6 +827,8 @@ window._doDQSub=function(inId,outId,isRival){
   document.getElementById("m-dqsub")?.remove();
   const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
   const live=m.live;
+  // v1.8.0: tracking solo para nuestro equipo (rival no tiene minTracked)
+  if(!isRival){_trackExit(m,outId); if(inId)_trackEnter(m,inId);}
   if(isRival){
     if(inId){
       live.rivalOnCourt=(live.rivalOnCourt||[]).map(id=>id===outId?inId:id);
@@ -1311,6 +1419,9 @@ function _tmPickOut(pid){
 function _tmPickIn(inPid){
   if(!_tmOutPid)return;
   const m=mById(S.teamId,S.matchId);if(!m?.live)return;
+  // v1.8.0: tracking de minutos y +/- antes del cambio
+  _trackExit(m,_tmOutPid);
+  _trackEnter(m,inPid);
   // Hacer la sustitución en memoria
   m.live.onCourt=m.live.onCourt.map(id=>id===_tmOutPid?inPid:id);
   m.live.selPid=null;
@@ -1591,7 +1702,7 @@ function autoBackup(){
 
 function exportBackup(){
   const filename=`kortline-backup-${td()}.json`;
-  const data={version:"1.7.9",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
+  const data={version:"1.8.0",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
   const json=JSON.stringify(data,null,2);
   const blob=new Blob([json],{type:"application/json"});
   // Descarga directa
@@ -3346,7 +3457,7 @@ function openClubSettings(){
       <div class="stg-sec-title">ℹ️ Acerca de</div>
       <div style="text-align:center;padding:18px 0 6px">
         <img src="${_FULL_SVG_URL}" style="height:36px;max-width:100%;opacity:0.9;margin-bottom:10px"/>
-        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.7.9 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
+        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.8.0 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
       </div>
     </div>
     <button class="btn-p" onclick="saveClubSettings()">Guardar configuración</button>
@@ -5049,7 +5160,7 @@ function liveGame(){
     const initScores=Array.from({length:nQ},()=>[0,0]);
     const initFouls=Array.from({length:nQ},()=>0);
     const initSec=(m.qMins||10)*60;
-    m.live={q:1,maxQ:1,qScores:initScores,teamFouls:initFouls,stats:{},rivalStats:{},log:[],selPid:null,onCourt:[],rivalOnCourt:[],activeTeam:"our",clockSec:initSec,clockMins:m.qMins||10,clockRunning:false,timeouts:{our:[0,0,0,0,0,0],rival:[0,0,0,0,0,0]},rivalFouls:[0,0,0,0,0,0]};
+    m.live={q:1,maxQ:1,qScores:initScores,teamFouls:initFouls,stats:{},rivalStats:{},log:[],selPid:null,onCourt:[],rivalOnCourt:[],activeTeam:"our",clockSec:initSec,clockMins:m.qMins||10,clockRunning:false,timeouts:{our:[0,0,0,0,0,0],rival:[0,0,0,0,0,0]},rivalFouls:[0,0,0,0,0,0],minTracked:{},inSince:{},plusMinusTracked:{},plusMinusBaseline:{}};
     save();
   }
   const live=m.live;
@@ -5063,6 +5174,17 @@ function liveGame(){
   if(!live.onCourt||live.onCourt.length===0){
     const tits=(m.titulares||[]).filter(id=>convIds.includes(id));
     live.onCourt=tits.length>0?tits.slice(0,5):convP.slice(0,5).map(p=>p.id);
+    // v1.8.0: registrar entrada a pista para los 5 titulares (tiempo absoluto = 0)
+    if(!live.minTracked)live.minTracked={};
+    if(!live.inSince)live.inSince={};
+    if(!live.plusMinusTracked)live.plusMinusTracked={};
+    if(!live.plusMinusBaseline)live.plusMinusBaseline={};
+    live.onCourt.forEach(id=>{_trackEnter(m,id);});
+    save();
+  } else if(!live.minTracked){
+    // Migración: partidos viejos sin tracking, asumir que los onCourt están desde el inicio
+    live.minTracked={};live.inSince={};live.plusMinusTracked={};live.plusMinusBaseline={};
+    live.onCourt.forEach(id=>{live.inSince[id]=0;live.plusMinusBaseline[id]=_scoreDiff(m);});
     save();
   }
   convP.forEach(p=>{if(!live.stats[p.id])live.stats[p.id]={p1m:0,p1a:0,p2m:0,p2a:0,p3m:0,p3a:0,ro:0,rd:0,ast:0,foul:0,stl:0,blk:0,to:0};});
@@ -5693,11 +5815,7 @@ function liveGame(){
     </div>`:""}
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
       <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--td)">Estadísticas del partido</div>
-      <button onclick="openLandscapeStats()" style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:7px;border:1px solid rgba(249,115,22,.3);background:rgba(249,115,22,.08);color:var(--orange);font-size:11px;font-weight:700;cursor:pointer">📊 Pantalla completa</button>
-    </div>
-    <div class="rotate-hint" onclick="requestLandscape()">
-      <span style="font-size:18px">🔄</span>
-      <span style="font-size:12px;color:var(--orange);font-weight:700">Gira el móvil para ver la tabla completa</span>
+      <div style="font-size:10px;color:var(--tm);font-weight:600">🔄 gira el móvil para verla completa</div>
     </div>
     ${(live.statsView==='rival'&&rivalEnabled)?rivalStatsTable:statsTable}
 
@@ -6684,6 +6802,9 @@ function deleteLogEntry(idx){
 }
 function subPlayer(inId,outId){
   const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
+  // v1.8.0: tracking de minutos y +/- antes de modificar onCourt
+  if(outId)_trackExit(m,outId);
+  _trackEnter(m,inId);
   if(outId===null){
     // Direct entry (court has space)
     if(!m.live.onCourt.includes(inId))m.live.onCourt.push(inId);
@@ -6944,19 +7065,32 @@ function openLandscapeStats(){
     const rows=plist.map((p,i)=>{
       const st=statsObj[p.id]||{};
       const pts=(st.p1m||0)+(st.p2m||0)*2+(st.p3m||0)*3;
-      const f=st.foul||0;const fc=f>=5?"#ef4444":f>=4?"#f59e0b":"var(--tx)";
+      const f=_totalFouls(st);const fc=f>=5?"#ef4444":f>=4?"#f59e0b":"var(--tx)";
       const inPista=!isRival&&onCourt.includes(p.id);
       const t2a=(st.p2m||0)+(st.p2a||0),t3a=(st.p3m||0)+(st.p3a||0),t1a=(st.p1m||0)+(st.p1a||0);
+      // v1.8.0 stats avanzadas (solo nuestro equipo, rival no tiene tracking de minutos/+-)
+      const minSec=isRival?0:_getMinSec(m,p.id);
+      const minStr=isRival?"—":_fmtMin(minSec);
+      const pm=isRival?0:_getPlusMinus(m,p.id);
+      const pmStr=isRival?"—":(pm>0?"+"+pm:String(pm));
+      const pmColor=pm>0?"#22c55e":pm<0?"#ef4444":"var(--td)";
+      const eff=_calcEFF(st);
+      const effColor=eff>0?"#22c55e":eff<0?"#ef4444":"var(--td)";
+      const efg=_calcEFGPct(st);
       return `<tr style="background:${inPista?"rgba(240,99,24,.06)":"transparent"}">
         <td style="font-weight:700;color:${accentColor};position:sticky;left:0;background:${inPista?"rgba(240,99,24,.06)":"var(--s)"}">${p.number||"?"}</td>
         <td style="font-weight:600;position:sticky;left:28px;background:${inPista?"rgba(240,99,24,.06)":"var(--s)"}"><div style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:90px">${_shortName(p.name)}</div></td>
+        <td style="color:var(--td);font-variant-numeric:tabular-nums">${minStr}</td>
         <td style="font-weight:900;color:${accentColor}">${pts}</td>
         <td>${st.p2m||0}/${t2a}</td><td>${st.p3m||0}/${t3a}</td><td>${st.p1m||0}/${t1a}</td>
+        <td style="color:var(--td)">${efg||0}%</td>
         <td style="color:#a855f7">${st.ro||0}</td><td style="color:#9ca3af">${st.rd||0}</td>
         <td style="color:#06b6d4">${st.ast||0}</td>
         <td style="color:${fc}">${f}</td>
         <td style="color:#3b82f6">${st.stl||0}</td><td style="color:#8b5cf6">${st.blk||0}</td>
         <td style="color:#ef4444">${st.to||0}</td>
+        <td style="color:${pmColor};font-weight:800">${pmStr}</td>
+        <td style="color:${effColor};font-weight:800">${eff}</td>
       </tr>`;
     }).join("");
 
@@ -6970,28 +7104,41 @@ function openLandscapeStats(){
     const totRo=plist.reduce((s,p)=>s+((statsObj[p.id]||{}).ro||0),0);
     const totRd=plist.reduce((s,p)=>s+((statsObj[p.id]||{}).rd||0),0);
     const totAst=plist.reduce((s,p)=>s+((statsObj[p.id]||{}).ast||0),0);
-    const totF=plist.reduce((s,p)=>s+((statsObj[p.id]||{}).foul||0),0);
+    const totF=plist.reduce((s,p)=>s+_totalFouls(statsObj[p.id]||{}),0);
     const totStl=plist.reduce((s,p)=>s+((statsObj[p.id]||{}).stl||0),0);
     const totBlk=plist.reduce((s,p)=>s+((statsObj[p.id]||{}).blk||0),0);
     const totTo=plist.reduce((s,p)=>s+((statsObj[p.id]||{}).to||0),0);
+    const totEff=plist.reduce((s,p)=>s+_calcEFF(statsObj[p.id]||{}),0);
+    const totEfgMade=totT2m+1.5*totT3m;
+    const totEfgAtt=totT2a+totT3a;
+    const totEfg=totEfgAtt>0?Math.round(100*totEfgMade/totEfgAtt):0;
     const totRow=`<tr class="totrow" style="font-weight:900;font-size:11px">
       <td style="position:sticky;left:0;background:var(--s2)">—</td>
       <td style="position:sticky;left:28px;background:var(--s2);color:var(--td)">Totales</td>
+      <td style="color:var(--td)">—</td>
       <td style="color:${accentColor}">${totPts}</td>
       <td>${totT2m}/${totT2a}</td><td>${totT3m}/${totT3a}</td><td>${totT1m}/${totT1a}</td>
+      <td style="color:var(--td)">${totEfg}%</td>
       <td style="color:#a855f7">${totRo}</td><td style="color:#9ca3af">${totRd}</td>
       <td style="color:#06b6d4">${totAst}</td>
       <td style="color:${totF>=10?"#ef4444":"var(--td)"}">${totF}</td>
       <td style="color:#3b82f6">${totStl}</td><td style="color:#8b5cf6">${totBlk}</td>
       <td style="color:#ef4444">${totTo}</td>
+      <td style="color:var(--td)">—</td>
+      <td style="color:var(--tx)">${totEff}</td>
     </tr>`;
     return `<div style="overflow-x:auto;border-radius:10px;border:1px solid ${isRival?"rgba(239,68,68,.3)":"var(--border)"}">
       <table class="stats-table" style="font-size:10px">
         <thead><tr style="background:var(--s2)">
           <th style="position:sticky;left:0;background:var(--s2);min-width:28px">#</th>
           <th style="position:sticky;left:28px;background:var(--s2);min-width:82px">Jugador</th>
+          <th title="Minutos jugados">MIN</th>
           <th style="color:${accentColor}">PTS</th>
-          <th>T2</th><th>T3</th><th>TL</th><th>RO</th><th>RD</th><th>AST</th><th>F</th><th>ROB</th><th>TAP</th><th>PER</th>
+          <th>T2</th><th>T3</th><th>TL</th>
+          <th title="Porcentaje de tiro efectivo">eFG%</th>
+          <th>RO</th><th>RD</th><th>AST</th><th>F</th><th>ROB</th><th>TAP</th><th>PER</th>
+          <th title="Plus / Minus">+/-</th>
+          <th title="Eficiencia / Valoración FEB">EFF</th>
         </tr></thead>
         <tbody>${rows}${totRow}</tbody>
       </table>
