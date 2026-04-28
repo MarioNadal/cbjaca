@@ -9,7 +9,23 @@ Repositorio: [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/
 
 ## Historial de versiones
 
-### v1.7.3 — Hotfix sustitución desde card en pista _(actual)_
+### v1.7.4 — Shot Chart sin coordenadas inconsistentes _(actual)_
+
+**Pre-aviso de zona reescrito.** Cuando hay discrepancia entre el botón pulsado (+2 / +3) y la zona donde se toca la cancha:
+
+- Antes: dos opciones → *"Sí, registrar como Xp"* (usa la zona detectada) o *"Mantener como Xp"* (usa el botón original con coordenadas en la zona equivocada).
+- **Bug:** la opción "Mantener" guardaba el shot con `value` original pero `(x,y)` en la zona contraria → en el mapa de tiros aparecían triples en zona de 2 (incoherente).
+
+**Ahora.** El botón "Mantener" desaparece. En su lugar:
+
+- **✓ Registrar como [zona detectada]** — acepta el cambio según la zona donde tocaste.
+- **↺ Volver a tocar zona de Xp** — cierra el aviso y **reabre la cancha** para que toques una zona correcta del valor original. El usuario tiene que tocar dentro o fuera del arco según corresponda; si vuelve a discrepar, vuelve a salir el aviso.
+
+Resultado: cualquier shot guardado en `m.live.shots[]` siempre tiene su `(x,y)` en la zona consistente con su `value`. El mapa de tiros nunca muestra incoherencias.
+
+---
+
+### v1.7.3 — Hotfix sustitución desde card en pista
 
 **Bug en v1.7.2.** El cambio de paradigma redirigió el tap de las court cards a `openSubModal(p.id)`, que estaba pensado para llamarse desde el banquillo (el `id` representa al jugador que entra). Resultado: tocar Carlos en pista mostraba "ENTRA #11 Carlos Uno · ¿Quién sale?" — semánticamente al revés.
 

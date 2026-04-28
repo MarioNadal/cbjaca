@@ -758,13 +758,12 @@ function _previewShotChange(pid,action,pts,xNorm,yNorm,detected){
   const zoneLabel=detected===3?"fuera del arco de 3":"dentro del arco de 3";
   el.innerHTML=`<div style="background:var(--s);border:2px solid var(--orange);border-radius:14px;padding:22px 18px;width:100%;max-width:340px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.7)">
     <div style="font-size:32px;margin-bottom:8px">⚠️</div>
-    <div style="font-family:var(--font-d);font-weight:900;font-size:17px;color:var(--orange);margin-bottom:6px">¿Cambiar a ${detected} puntos?</div>
+    <div style="font-family:var(--font-d);font-weight:900;font-size:17px;color:var(--orange);margin-bottom:6px">Zona y tipo no coinciden</div>
     <div style="font-size:13px;color:var(--td);margin-bottom:16px;line-height:1.5">
-      Pulsaste <b style="color:var(--tx)">${labelOld}</b> pero la zona donde tocaste está <b style="color:var(--orange)">${zoneLabel}</b>.<br/>
-      ¿Registrar como <b style="color:var(--tx)">${labelNew}</b>?
+      Pulsaste <b style="color:var(--tx)">${labelOld}</b> pero la zona donde tocaste está <b style="color:var(--orange)">${zoneLabel}</b>.
     </div>
-    <button onclick="_acceptShotChange('${pid}','${newAction}',${newPts},${xNorm},${yNorm})" style="width:100%;padding:13px;border:none;border-radius:10px;font-weight:900;font-size:15px;cursor:pointer;background:linear-gradient(135deg,var(--orange),var(--orange2));color:white;margin-bottom:8px">✓ Sí, registrar como ${detected}p</button>
-    <button onclick="_keepOriginalShot('${pid}','${action}',${pts},${xNorm},${yNorm})" style="width:100%;padding:11px;border:1px solid var(--border);border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;background:var(--s2);color:var(--td)">Mantener como ${wasValue}p</button>
+    <button onclick="_acceptShotChange('${pid}','${newAction}',${newPts},${xNorm},${yNorm})" style="width:100%;padding:13px;border:none;border-radius:10px;font-weight:900;font-size:15px;cursor:pointer;background:linear-gradient(135deg,var(--orange),var(--orange2));color:white;margin-bottom:8px">✓ Registrar como ${labelNew}</button>
+    <button onclick="_retryShotZone('${pid}','${action}',${pts})" style="width:100%;padding:11px;border:1px solid var(--border);border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;background:var(--s2);color:var(--td)">↺ Volver a tocar zona de ${wasValue}p</button>
   </div>`;
   document.body.appendChild(el);
 }
@@ -773,9 +772,15 @@ window._acceptShotChange=function(pid,newAction,newPts,xNorm,yNorm){
   document.getElementById("m-shotchange")?.remove();
   _confirmShot(pid,newAction,newPts,xNorm,yNorm);
 };
-window._keepOriginalShot=function(pid,action,pts,xNorm,yNorm){
+// v1.7.4: en lugar de "mantener" (que dejaba el shot con coordenada inconsistente),
+// reabrimos la cancha para que el usuario toque una zona correcta del valor original.
+window._retryShotZone=function(pid,action,pts){
   document.getElementById("m-shotchange")?.remove();
-  _confirmShot(pid,action,pts,xNorm,yNorm);
+  // Asegurarse de cerrar el shot chart anterior (puede haber quedado abierto)
+  document.getElementById("m-shotchart")?.remove();
+  window._shotChartCallback=null;
+  // Reabrir el modal de captura con el mismo action/pts
+  openShotChartModal(pid,action,pts);
 };
 window._cancelShotChart=function(){
   document.getElementById("m-shotchart")?.remove();
@@ -1452,7 +1457,7 @@ function autoBackup(){
 
 function exportBackup(){
   const filename=`kortline-backup-${td()}.json`;
-  const data={version:"1.7.3",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
+  const data={version:"1.7.4",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
   const json=JSON.stringify(data,null,2);
   const blob=new Blob([json],{type:"application/json"});
   // Descarga directa
@@ -3202,7 +3207,7 @@ function openClubSettings(){
       <div class="stg-sec-title">ℹ️ Acerca de</div>
       <div style="text-align:center;padding:18px 0 6px">
         <img src="${_FULL_SVG_URL}" style="height:36px;max-width:100%;opacity:0.9;margin-bottom:10px"/>
-        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.7.3 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
+        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.7.4 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
       </div>
     </div>
     <button class="btn-p" onclick="saveClubSettings()">Guardar configuración</button>
