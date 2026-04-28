@@ -9,7 +9,35 @@ Repositorio: [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/
 
 ## Historial de versiones
 
-### v1.7.6 — Convocatoria sin saltos al seleccionar _(actual)_
+### v1.7.7 — Validaciones de convocatoria + banner del capitán _(actual)_
+
+**Regresión de v1.6.0 restaurada.** En algún momento entre v1.6.0 y v1.7.6 se perdieron las **validaciones en cadena al cerrar la convocatoria** y el **banner del capitán prominente**. `_convFinish()` se había quedado en un simple `save() + cerrar`. Restaurado:
+
+**Validaciones en cadena al pulsar "✅ Listo — ir al partido"**
+
+Se comprueba en orden y se muestra un modal por cada caso fallido:
+
+| Caso | Severidad | Modal |
+|------|-----------|-------|
+| 0 convocados | Bloqueante | "Sin convocados — no puedes empezar el partido" — solo botón "Volver a la convocatoria" |
+| <5 convocados | Bloqueante | "Solo X convocados — FIBA exige 5 en pista" — solo "Añadir más" |
+| <5 titulares | Aviso | "Faltan titulares (X/5)" — botón principal "Designar titulares" + secundario "Continuar igual (no recomendado)" |
+| Sin capitán | Aviso | "Sin capitán designado · FIBA: dirige al equipo si te expulsan" — botón principal "Designar capitán" + secundario "Continuar igual" |
+
+Los **bloqueantes no permiten continuar**. Los **avisos** sí — el entrenador puede ignorarlos conscientemente con el botón gris.
+
+**Banner del capitán prominente en el wizard**
+
+Encima de la lista de jugadores aparece siempre un banner con el estado del capitán:
+
+- **Verde** si está designado: `© Capitán: #X Nombre · Dirige al equipo si el entrenador es expulsado`.
+- **Amarillo** si no: `⚠️ Sin capitán designado · FIBA: pulsa (C) junto a un convocado`.
+
+El banner se actualiza **in-place** al cambiar el capitán (sin redibujar el modal completo, manteniendo el patrón de v1.7.6).
+
+---
+
+### v1.7.6 — Convocatoria sin saltos al seleccionar
 
 **Bug.** En el modal de convocatoria de partido (📋 ¿Quién juega?), cada toque sobre un jugador disparaba `_convToggle` → `save()` → reescribía todo el `innerHTML` del modal con `_convSetupHtml(...)`. Resultado: la lista se "redibujaba" y el scroll volvía al principio. Especialmente molesto al elegir jugadores del final (los del banquillo con dorsales altos).
 

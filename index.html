@@ -1589,7 +1589,7 @@ function autoBackup(){
 
 function exportBackup(){
   const filename=`kortline-backup-${td()}.json`;
-  const data={version:"1.7.6",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
+  const data={version:"1.7.7",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
   const json=JSON.stringify(data,null,2);
   const blob=new Blob([json],{type:"application/json"});
   // Descarga directa
@@ -3339,7 +3339,7 @@ function openClubSettings(){
       <div class="stg-sec-title">ℹ️ Acerca de</div>
       <div style="text-align:center;padding:18px 0 6px">
         <img src="${_FULL_SVG_URL}" style="height:36px;max-width:100%;opacity:0.9;margin-bottom:10px"/>
-        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.7.6 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
+        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.7.7 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
       </div>
     </div>
     <button class="btn-p" onclick="saveClubSettings()">Guardar configuración</button>
@@ -4545,6 +4545,14 @@ function _convSetupHtml(m,t,step){
   const rivalEnabled=true; // Always show rival tab for TL tracking
   const rival=m.rival||"Rival";
 
+  // v1.7.7: banner del capitán prominente con estado (regresión de v1.6.0).
+  const capId=m.capitan;
+  const capPlayer=capId?players.find(x=>x.id===capId):null;
+  const capInConv=capPlayer&&convIds.includes(capId);
+  const capBanner=capInConv
+    ? `<div id="conv-cap-banner" style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.4);border-radius:10px;padding:8px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px"><span style="font-size:20px">©</span><div style="flex:1;font-size:12.5px;color:#86efac;line-height:1.45"><b style="color:#22c55e">Capitán: #${capPlayer.number||"?"} ${esc(capPlayer.name)}</b><br/><span style="font-size:11px;color:var(--td)">Dirige al equipo si el entrenador es expulsado</span></div></div>`
+    : `<div id="conv-cap-banner" style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.4);border-radius:10px;padding:8px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px"><span style="font-size:20px">⚠️</span><div style="flex:1;font-size:12.5px;color:#fbbf24;line-height:1.45"><b style="color:#f59e0b">Sin capitán designado</b><br/><span style="font-size:11px;color:var(--td)">FIBA: pulsa <b>(C)</b> junto a un convocado · dirige al equipo si te expulsan</span></div></div>`;
+
   // Step 0: our convocatoria
   const ourStep=`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
@@ -4558,7 +4566,8 @@ function _convSetupHtml(m,t,step){
       </div>
     </div>
     <div style="font-size:11px;color:var(--tm);margin-bottom:10px">Toca para convocar · ⭐ titular · (C) capitán</div>
-    <div class="card" style="margin-bottom:12px;max-height:46vh;overflow-y:auto">
+    ${capBanner}
+    <div class="card" style="margin-bottom:12px;max-height:42vh;overflow-y:auto">
       ${players.length===0
         ?'<div style="padding:20px;text-align:center;color:var(--tm);font-size:13px">Sin jugadores en la plantilla. Añádelos desde el equipo.</div>'
         :players.map(p=>{
@@ -4665,6 +4674,23 @@ function _convRefreshHeader(){
   const m=mById(S.teamId,S.matchId);if(!m)return;
   const sub=document.getElementById("conv-subtitle");
   if(sub)sub.textContent=`${(m.convocados||[]).length} convocados · ${(m.titulares||[]).length} titulares`;
+  _convRefreshCapBanner();
+}
+function _convRefreshCapBanner(){
+  const m=mById(S.teamId,S.matchId);if(!m)return;
+  const banner=document.getElementById("conv-cap-banner");
+  if(!banner)return;
+  const players=pl(S.teamId);
+  const capId=m.capitan;
+  const capPlayer=capId?players.find(x=>x.id===capId):null;
+  const capInConv=capPlayer&&(m.convocados||[]).includes(capId);
+  if(capInConv){
+    banner.style.cssText="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.4);border-radius:10px;padding:8px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px";
+    banner.innerHTML=`<span style="font-size:20px">©</span><div style="flex:1;font-size:12.5px;color:#86efac;line-height:1.45"><b style="color:#22c55e">Capitán: #${capPlayer.number||"?"} ${esc(capPlayer.name)}</b><br/><span style="font-size:11px;color:var(--td)">Dirige al equipo si el entrenador es expulsado</span></div>`;
+  } else {
+    banner.style.cssText="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.4);border-radius:10px;padding:8px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px";
+    banner.innerHTML=`<span style="font-size:20px">⚠️</span><div style="flex:1;font-size:12.5px;color:#fbbf24;line-height:1.45"><b style="color:#f59e0b">Sin capitán designado</b><br/><span style="font-size:11px;color:var(--td)">FIBA: pulsa <b>(C)</b> junto a un convocado · dirige al equipo si te expulsan</span></div>`;
+  }
 }
 function _convToggle(pid){
   const m=mById(S.teamId,S.matchId);if(!m)return;
@@ -4738,9 +4764,75 @@ function _rivDel(id){
   el.innerHTML=_convSetupHtml(m,t,el._step||1);
 }
 function _convFinish(){
+  // v1.7.7: validaciones en cadena (regresión de v1.6.0 restaurada).
+  const m=mById(S.teamId,S.matchId);if(!m){save();return;}
+  const conv=m.convocados||[];
+  const tit=(m.titulares||[]).filter(id=>conv.includes(id));
+  const cap=m.capitan;
+  // Sin convocados → bloqueante
+  if(conv.length===0){
+    return _convValidationModal({
+      icon:"⚠️",
+      title:"Sin convocados",
+      msg:"No puedes empezar el partido sin convocar a ningún jugador.",
+      primaryLabel:"Volver a la convocatoria",
+      onContinue:null // sin opción de continuar
+    });
+  }
+  // Menos de 5 convocados → bloqueante
+  if(conv.length<5){
+    return _convValidationModal({
+      icon:"⚠️",
+      title:`Solo ${conv.length} convocado${conv.length===1?"":"s"}`,
+      msg:"FIBA exige <b>5 jugadores en pista</b>. Necesitas al menos 5 convocados.",
+      primaryLabel:"Añadir más convocados",
+      onContinue:null
+    });
+  }
+  // Menos de 5 titulares → aviso
+  if(tit.length<5){
+    return _convValidationModal({
+      icon:"⭐",
+      title:`Faltan titulares (${tit.length}/5)`,
+      msg:"FIBA exige los 5 titulares definidos para empezar. Pulsa la estrella ⭐ junto al nombre de los 5 que saltarán a pista.",
+      primaryLabel:"Designar titulares",
+      onContinue:_convFinishDeferred
+    });
+  }
+  // Sin capitán → aviso
+  if(!cap||!conv.includes(cap)){
+    return _convValidationModal({
+      icon:"©",
+      title:"Sin capitán designado",
+      msg:'<b>FIBA:</b> el capitán dirige al equipo si el entrenador es expulsado. Pulsa <b>(C)</b> junto al nombre del capitán.',
+      primaryLabel:"Designar capitán",
+      onContinue:_convFinishDeferred
+    });
+  }
+  // Todo OK
+  _convFinishDeferred();
+}
+
+function _convFinishDeferred(){
   save();
+  document.getElementById("m-conv-validation")?.remove();
   document.getElementById("m-conv-setup")?.remove();
   S.screen="matchDetail";render();
+}
+
+function _convValidationModal({icon,title,msg,primaryLabel,onContinue}){
+  document.getElementById("m-conv-validation")?.remove();
+  const el=document.createElement("div");
+  el.id="m-conv-validation";
+  el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:99998;display:flex;align-items:center;justify-content:center;padding:20px;";
+  el.innerHTML=`<div style="background:var(--s);border:2px solid var(--orange);border-radius:14px;padding:22px 18px;width:100%;max-width:340px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.7)">
+    <div style="font-size:32px;margin-bottom:8px">${icon}</div>
+    <div style="font-family:var(--font-d);font-weight:900;font-size:17px;color:var(--orange);margin-bottom:6px">${title}</div>
+    <div style="font-size:13px;color:var(--td);margin-bottom:16px;line-height:1.5">${msg}</div>
+    <button onclick="document.getElementById('m-conv-validation').remove()" style="width:100%;padding:13px;border:none;border-radius:10px;font-weight:900;font-size:15px;cursor:pointer;background:linear-gradient(135deg,var(--orange),var(--orange2));color:white;margin-bottom:8px">${primaryLabel}</button>
+    ${onContinue?`<button onclick="document.getElementById('m-conv-validation').remove();_convFinishDeferred()" style="width:100%;padding:11px;border:1px solid var(--border);border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;background:var(--s2);color:var(--td)">Continuar igual (no recomendado)</button>`:""}
+  </div>`;
+  document.body.appendChild(el);
 }
 
 function saveMatchMeta(mid,eid){
