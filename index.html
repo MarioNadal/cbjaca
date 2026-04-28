@@ -614,6 +614,138 @@ function _totalFouls(st){
 }
 
 /* ═══════════════════════════════════════
+   SUSTITUCIÓN FORZOSA TRAS DESCALIFICACIÓN (v1.7.5)
+   Cuando un jugador alcanza el umbral de descalificación (5 personales /
+   2 técnicas / 2 antideportivas / 1+1 / 1 descalificante), si está en
+   pista debe ser sustituido obligatoriamente. Encolamos la sustitución
+   y la procesamos cuando se cierran los modales de TL/picker/etc.
+═══════════════════════════════════════ */
+function _enqueueDQSub(pid,isRival){
+  window._pendingDQSubs=window._pendingDQSubs||[];
+  // Evitar duplicados (la misma persona se descalifica una vez)
+  if(window._pendingDQSubs.some(x=>x.pid===pid&&x.isRival===isRival))return;
+  window._pendingDQSubs.push({pid,isRival});
+  _tryProcessDQSubs();
+}
+
+function _tryProcessDQSubs(){
+  if(!window._pendingDQSubs||!window._pendingDQSubs.length)return;
+  // Esperar a que no haya modales bloqueantes (TL, shot chart, picker, cadenas)
+  const blockers=['m-foultl','m-teamtl','m-tlshoot','m-teamtlshoot','m-ourtl','m-ourtlshoot','m-shotchart','m-shotchange','m-actpicker','m-chainast','m-chainreb'];
+  const hasBlocker=blockers.some(id=>document.getElementById(id));
+  if(hasBlocker){
+    setTimeout(_tryProcessDQSubs,500);
+    return;
+  }
+  // Procesar el siguiente DQ
+  const next=window._pendingDQSubs.shift();
+  _forceSubAfterDQ(next.pid,next.isRival);
+}
+
+function _forceSubAfterDQ(pid,isRival){
+  const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
+  const live=m.live;
+  document.getElementById("m-dqsub")?.remove();
+
+  // Verificar que el jugador sigue en pista (puede haber salido por otro flujo)
+  const onCourtArr=isRival?(live.rivalOnCourt||[]):(live.onCourt||[]);
+  if(!onCourtArr.includes(pid)){
+    // Ya no está en pista; nada que hacer. Procesar siguiente.
+    _tryProcessDQSubs();
+    return;
+  }
+
+  const allP=isRival?(m.rivalPlayers||[]):pl(S.teamId);
+  const convIds=isRival?(m.rivalPlayers||[]).map(p=>p.id):(m.convocados||[]);
+  const convP=allP.filter(p=>convIds.includes(p.id)).sort((a,b)=>(a.number||99)-(b.number||99));
+  const benchP=convP.filter(p=>!onCourtArr.includes(p.id));
+  const stats=isRival?(live.rivalStats||{}):(live.stats||{});
+  // Banquillo válido = no descalificados
+  const benchValid=benchP.filter(p=>!_isDQ(stats[p.id]||{}));
+
+  const outP=allP.find(p=>p.id===pid);
+  const outName=esc(outP?.name||"?");
+  const outNum=outP?.number||"?";
+  const stOut=stats[pid]||{};
+  // Motivo
+  let motivo="Descalificado";
+  if((stOut.fdq||0)>=1)motivo="Falta descalificante";
+  else if((stOut.foul||0)>=5)motivo="5 faltas personales";
+  else if((stOut.ftech||0)>=2)motivo="2 faltas técnicas";
+  else if((stOut.funsport||0)>=2)motivo="2 antideportivas";
+  else if(((stOut.ftech||0)+(stOut.funsport||0))>=2)motivo="1 técnica + 1 antideportiva";
+
+  const accentColor=isRival?"#ef4444":"var(--orange)";
+  const teamColor=isRival?"#ef4444":(S.teams.find(x=>x.id===S.teamId)?.color||"#F06318");
+
+  const benchHtml=benchValid.length===0
+    ? `<div style="background:rgba(245,158,11,.1);border:1px dashed rgba(245,158,11,.4);border-radius:10px;padding:14px 12px;text-align:center;color:#f59e0b;font-size:13px;line-height:1.5">⚠️ Banquillo agotado.<br/><b>${isRival?"El rival continuará":"Continuarás"}</b> con menos jugadores en pista.</div>`
+    : benchValid.map((p,i)=>{
+        const stP=stats[p.id]||{};
+        const f=_totalFouls(stP);
+        const fc=f>=4?"#f59e0b":"var(--td)";
+        return `<button onclick="_doDQSub('${p.id}','${pid}',${isRival?'true':'false'})" style="display:flex;align-items:center;gap:10px;width:100%;padding:11px 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--s2);color:var(--tx);cursor:pointer;font-family:inherit;text-align:left;margin-bottom:6px">
+          <div style="width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,${teamColor},${teamColor}88);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:white">${p.number||"?"}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:800;font-size:14px">${esc(p.name)}</div>
+            <div style="font-size:11px;color:${fc}">${f} falta${f===1?"":"s"}</div>
+          </div>
+          <span style="font-size:18px;color:#22c55e">⬆️</span>
+        </button>`;
+      }).join("");
+
+  const el=document.createElement("div");
+  el.id="m-dqsub";
+  el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(7,15,30,.96);z-index:99998;display:flex;align-items:center;justify-content:center;padding:20px;";
+  // Sin onclick para cerrar — sustitución obligatoria
+  el.innerHTML=`<div style="background:var(--s);border:2px solid #ef4444;border-radius:16px;padding:22px 18px;width:100%;max-width:380px;box-shadow:0 8px 40px rgba(0,0,0,.7);max-height:90vh;overflow-y:auto">
+    <div style="text-align:center;margin-bottom:14px">
+      <div style="font-size:36px;line-height:1;margin-bottom:6px">⛔</div>
+      <div style="font-family:var(--font-d);font-weight:900;font-size:18px;color:#ef4444">Descalificado</div>
+      <div style="font-size:12px;color:var(--td);margin-top:3px">${motivo}</div>
+    </div>
+    <div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.35);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:20px">⬇️</span>
+      <div><div style="font-size:11px;color:var(--td);font-weight:700">SALE</div><div style="font-weight:800;font-size:15px">#${outNum} ${outName}</div></div>
+    </div>
+    ${benchValid.length>0?`<div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:${accentColor};margin-bottom:8px">Elige sustituto del banquillo</div>`:""}
+    ${benchHtml}
+    ${benchValid.length===0?`<button onclick="_doDQSub(null,'${pid}',${isRival?'true':'false'})" style="width:100%;padding:13px;border:none;border-radius:10px;font-weight:900;font-size:15px;cursor:pointer;background:linear-gradient(135deg,#f59e0b,#d97706);color:white;margin-top:8px">OK, sacar sin sustituir</button>`:""}
+  </div>`;
+  document.body.appendChild(el);
+}
+
+window._doDQSub=function(inId,outId,isRival){
+  document.getElementById("m-dqsub")?.remove();
+  const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
+  const live=m.live;
+  if(isRival){
+    if(inId){
+      live.rivalOnCourt=(live.rivalOnCourt||[]).map(id=>id===outId?inId:id);
+    } else {
+      live.rivalOnCourt=(live.rivalOnCourt||[]).filter(id=>id!==outId);
+    }
+  } else {
+    if(inId){
+      live.onCourt=(live.onCourt||[]).map(id=>id===outId?inId:id);
+      // Log
+      const players=pl(S.teamId);
+      const pIn=players.find(p=>p.id===inId);
+      const pOut=players.find(p=>p.id===outId);
+      const desc="↔ "+_shortName(pIn?.name||"?")+" ← "+_shortName(pOut?.name||"?")+" (DQ)";
+      live.log=[...(live.log||[]),{pid:inId,action:"sub",pts:0,q:live.q,clockAt:live.clockSec,desc}].slice(-80);
+      toast("⛔↔ "+desc);
+    } else {
+      live.onCourt=(live.onCourt||[]).filter(id=>id!==outId);
+      toast("⛔ Sin sustituto · 4 jugadores en pista");
+    }
+  }
+  save();render();
+  // Procesar siguientes en cola si las hay
+  setTimeout(_tryProcessDQSubs,200);
+};
+
+/* ═══════════════════════════════════════
    SHOT CHART · CANCHA SVG (v1.7.0)
    Media cancha FIBA en proporciones reales (15m ancho × 14m fondo).
    ViewBox 0 0 1500 1400 (cm). Aro en (750, 1242.5) — a 1.575m del fondo.
@@ -1457,7 +1589,7 @@ function autoBackup(){
 
 function exportBackup(){
   const filename=`kortline-backup-${td()}.json`;
-  const data={version:"1.7.4",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
+  const data={version:"1.7.5",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
   const json=JSON.stringify(data,null,2);
   const blob=new Blob([json],{type:"application/json"});
   // Descarga directa
@@ -3207,7 +3339,7 @@ function openClubSettings(){
       <div class="stg-sec-title">ℹ️ Acerca de</div>
       <div style="text-align:center;padding:18px 0 6px">
         <img src="${_FULL_SVG_URL}" style="height:36px;max-width:100%;opacity:0.9;margin-bottom:10px"/>
-        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.7.4 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
+        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.7.5 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
       </div>
     </div>
     <button class="btn-p" onclick="saveClubSettings()">Guardar configuración</button>
@@ -5751,9 +5883,15 @@ function liveAction(pid,action,pts){
   if(pts>0)live.qScores[qi][0]=(live.qScores[qi][0]||0)+pts;
   if(action==="foul"||action==="ftech"||action==="funsport"||action==="fdq"){if(!live.teamFouls)live.teamFouls=[0,0,0,0,0];live.teamFouls[qi]=(live.teamFouls[qi]||0)+1;}
   }
-  const pname=_shortName(pl(S.teamId).find(p=>p.id===pid)?.name||"?");
+  // v1.7.5: pname soporta jugador rival también
+  const pname=isRivalPid
+    ? _shortName((m.rivalPlayers||[]).find(p=>p.id===pid)?.name||"Rival")
+    : _shortName(pl(S.teamId).find(p=>p.id===pid)?.name||"?");
   const isFoulAction=(action==="foul"||action==="ftech"||action==="funsport"||action==="fdq");
-  if(isFoulAction){
+  // v1.7.5: el bloque común de falta (parar reloj + abrir modal TL al rival) solo
+  // aplica cuando es nuestro jugador. Si el pid es rival, su flujo ya fue tratado
+  // en la rama isRivalPid (parada de reloj + openOurFoulTLModal).
+  if(isFoulAction && !isRivalPid){
     // v1.6.13 · B-38: parar reloj con falta si el partido lo tiene activado
     if(m.stopOnFoul&&live.clockRunning){
       live.clockRunning=false;clearInterval(_liveTimer);_liveTimer=null;
@@ -5773,9 +5911,22 @@ function liveAction(pid,action,pts){
   live.log=[...(live.log||[]),entry];
   if(live.log.length>80)live.log=live.log.slice(-80);
   // v1.6.13 · B-47: descalificación considera personales + técnicas + antideportivas + descalificantes
-  const stP=live.stats?.[pid]||{};
-  if(_isDQ(stP))toast("⛔ "+pname+" — DESCALIFICADO");
-  else if((stP.foul||0)===4)toast("⚠️ "+pname+" — 4ª falta personal");
+  // v1.7.5: tras la falta, comprobar DQ en ambos equipos y encolar sub forzoso si está en pista
+  if(isFoulAction){
+    if(isRivalPid){
+      const stPRival=live.rivalStats?.[pid]||{};
+      if(_isDQ(stPRival)){
+        toast("⛔ "+pname+" — DESCALIFICADO");
+        if((live.rivalOnCourt||[]).includes(pid))_enqueueDQSub(pid,true);
+      } else if((stPRival.foul||0)===4)toast("⚠️ "+pname+" — 4ª falta personal");
+    } else {
+      const stP=live.stats?.[pid]||{};
+      if(_isDQ(stP)){
+        toast("⛔ "+pname+" — DESCALIFICADO");
+        if((live.onCourt||[]).includes(pid))_enqueueDQSub(pid,false);
+      } else if((stP.foul||0)===4)toast("⚠️ "+pname+" — 4ª falta personal");
+    }
+  }
   _syncLiveQ(m);save();render();
 }
 function openFoulTLModal(foulerPid, isTech, foulKind){

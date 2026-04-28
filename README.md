@@ -9,7 +9,28 @@ Repositorio: [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/
 
 ## Historial de versiones
 
-### v1.7.4 — Shot Chart sin coordenadas inconsistentes _(actual)_
+### v1.7.5 — Sustitución forzosa tras descalificación _(actual)_
+
+**Reglamento FIBA:** un jugador descalificado **no puede seguir en pista**. Antes la app marcaba al DQ con borde rojo en su card pero permitía que siguiera registrando acciones — incoherente con el reglamento.
+
+**Ahora.** Cuando una falta descalifica al jugador (5 personales, 2 técnicas, 2 antideportivas, 1 técnica + 1 antideportiva, o 1 descalificante directa), si está en pista se abre automáticamente un **modal forzoso de sustitución**:
+
+- Título: **⛔ Descalificado** + motivo concreto ("5 faltas personales", "2 técnicas", etc.).
+- **SALE: #X Jugador** (rojo).
+- **Lista del banquillo válido** (se filtran los jugadores que ya están descalificados).
+- **No tiene botón Cancelar.** El usuario debe elegir un sustituto sí o sí.
+
+**Excepción única:** si todo el banquillo está agotado (no hay convocados disponibles, o todos los del banquillo están a su vez descalificados), aparece un aviso amarillo *"⚠️ Banquillo agotado · continuarás con menos jugadores en pista"* y un botón único *"OK, sacar sin sustituir"* que retira al DQ del onCourt sin reemplazo.
+
+**Encolamiento.** Si la sustitución forzosa coincide con el modal de tiros libres en curso (la falta que descalifica también puede generar TLs), el modal forzoso queda **encolado** y se abre en cuanto se cierran todos los modales activos (TL, picker, shot chart, cadenas, etc.) — vía `_enqueueDQSub` + polling cada 500 ms.
+
+**Cubre los dos equipos.** Funciona tanto cuando descalifica un jugador nuestro como uno del rival (con `m.rivalPlayers` registrados). El sustituto del rival se busca en su banquillo.
+
+**Bug colateral arreglado.** En la rama `isRivalPid` de `liveAction`, el bloque común de "abrir modal de TL al rival" se ejecutaba también — abriendo dos modales de TL en la misma falta. Ahora el bloque común solo se ejecuta `if(isFoulAction && !isRivalPid)`. También `pname` ahora soporta jugador rival en lugar de devolver "?".
+
+---
+
+### v1.7.4 — Shot Chart sin coordenadas inconsistentes
 
 **Pre-aviso de zona reescrito.** Cuando hay discrepancia entre el botón pulsado (+2 / +3) y la zona donde se toca la cancha:
 
