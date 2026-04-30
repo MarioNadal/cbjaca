@@ -1924,7 +1924,7 @@ function _clearAutoBackup(){
 
 function exportBackup(){
   const filename=`kortline-backup-${td()}.json`;
-  const data={version:"1.8.3",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
+  const data={version:"1.8.4",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
   const json=JSON.stringify(data,null,2);
   const blob=new Blob([json],{type:"application/json"});
   // Descarga directa
@@ -3691,7 +3691,7 @@ function openClubSettings(){
       <div class="stg-sec-title">ℹ️ Acerca de</div>
       <div style="text-align:center;padding:18px 0 6px">
         <img src="${_FULL_SVG_URL}" style="height:36px;max-width:100%;opacity:0.9;margin-bottom:10px"/>
-        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.8.3 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
+        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.8.4 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
       </div>
     </div>
     <button class="btn-p" onclick="saveClubSettings()">Guardar configuración</button>

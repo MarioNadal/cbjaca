@@ -50,6 +50,8 @@ Kortline funciona desde el navegador, pero te recomendamos instalarla como PWA p
 
 La primera vez que abras Kortline en cada plataforma verás un pop-up con el paso a paso.
 
+> **🆕 v1.8.4 · Modo offline real.** Tras abrir Kortline una vez con red, la app queda cacheada en el dispositivo. Si en el banquillo no hay cobertura, recargar sigue funcionando: el partido en vivo, el pase de lista y los datos guardados están disponibles offline. La app se actualiza sola cuando vuelves a tener red.
+
 ### 2.2 Configuración del club
 
 Pulsa el **logo** arriba a la izquierda para abrir ⚙️ **Ajustes del club**.
@@ -844,5 +846,5 @@ Con dos botones:
 
 ---
 
-_Kortline · Hecho con 🧡 para CB Jaca · v1.8.3_
+_Kortline · Hecho con 🧡 para CB Jaca · v1.8.4_
 _Desarrollado por Mario Nadal Ara_

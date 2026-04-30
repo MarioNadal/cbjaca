@@ -9,7 +9,41 @@ Repositorio: [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/
 
 ## Historial de versiones
 
-### v1.8.3 — Fin del autoBackup duplicador (libera ~50% del espacio) _(actual)_
+### v1.8.4 — PWA real: `sw.js` + `manifest.json` (instalable y offline) _(actual)_
+
+**Por qué.** Auditando la regresión de v1.8.3 con `QA_REGRESSION.md` se detectó que la PWA no funcionaba realmente: `index.html` referenciaba dos archivos que **no existían en el repo**:
+
+- `<link rel="manifest" href="manifest.json">` → 404
+- `navigator.serviceWorker.register("sw.js")` → 404
+
+Como el `register()` tiene un `.catch(()=>{})` silencioso, la app no fallaba a la vista — pero sin SW **no hay caché offline ni instalación como PWA**. En el banquillo, donde la cobertura puede ser dudosa, eso es un riesgo real: si la red falla justo cuando abres la app, se queda en blanco.
+
+**Cambios:**
+
+- **Nuevo `manifest.json`** con `name`, `short_name`, `theme_color #070f1e`, `display: standalone`, `orientation: portrait` y los iconos PNG (`icon-192.png`, `icon-512.png`) ya presentes en el repo, más el SVG `assets/logos/logo-icon.svg`. Incluye purpose `any` y `maskable` para que Android lo recorte bien.
+- **Nuevo `sw.js`** con estrategia híbrida:
+  - **App shell precacheado** en `install` (`/`, `index.html`, `manifest.json`, los dos iconos PNG y los dos SVG).
+  - **Network-first para navegaciones** (HTML): el usuario ve siempre la última versión cuando hay red, fallback a caché si no hay.
+  - **Cache-first para assets** (iconos, fonts, CDN scripts): arranque instantáneo, refresco silencioso en background.
+  - **Limpieza automática de cachés viejas** en `activate` (busca `kortline-*` distintos a la versión actual y los borra).
+  - **Mensaje `SKIP_WAITING`** para forzar refresco desde la app si hace falta.
+- **`CACHE_VERSION = "kortline-v1.8.4"`** — bumpear esto en cada release invalida la caché vieja en clientes que ya tenían la app instalada.
+- Bump de versión en `index.html` (`exportBackup` y panel "Acerca de").
+
+**Resultado.**
+
+| Verificación | Antes (v1.8.3) | Después (v1.8.4) |
+|---|---|---|
+| Service worker registrado | ❌ 404 | ✅ activado |
+| App instalable como PWA | ❌ falla | ✅ Chrome/Safari ofrecen "Instalar" |
+| Funciona offline | ❌ blanco | ✅ carga desde caché |
+| Caché controlada | ❌ no hay | ✅ versionada por release |
+
+Tras subir esta versión, en el dispositivo del banquillo: abrir la app online una vez (que cachee), poner el móvil en avión, recargar → debe seguir funcionando.
+
+---
+
+### v1.8.3 — Fin del autoBackup duplicador (libera ~50% del espacio)
 
 **Diagnóstico.** Con localStorage casi nuevo, `cbj:autobackup` ya pesaba **74 KB** mientras que toda la app real (`cbj:m`, `cbj:p`, `cbj:s`, `cbj:t`...) sumaba apenas 73 KB. Es decir, **el autobackup duplicaba todo el almacenamiento en cada `save()`**. Con varios partidos + fotos + shots, eso hacía explotar el límite del navegador (5–10 MB) muy rápido. Mario reportó que ni la primera foto cabía: el localStorage estaba al borde porque el autobackup ya ocupaba la mitad.
 

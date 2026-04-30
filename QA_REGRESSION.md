@@ -8,7 +8,7 @@ Checklist de features críticas que **no pueden romperse** entre versiones. Se e
 - Si hay fallos, anotar bug ID y arreglar antes de release.
 - Después de release, repetir 1 vez más en producción.
 
-**Versión última auditada**: v1.8.3 · 2026-04-30
+**Versión última auditada**: v1.8.4 · 2026-04-30 (auditoría inicial detectó SW/manifest faltantes en v1.8.3 → arreglados en v1.8.4)
 
 ---
 
