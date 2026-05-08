@@ -429,21 +429,25 @@ select.fi{padding-right:28px;background-image:url("data:image/svg+xml,%3Csvg xml
 .rotate-hint{display:none;align-items:center;gap:8px;padding:8px 12px;background:rgba(249,115,22,.08);border:1px dashed rgba(249,115,22,.3);border-radius:8px;margin-bottom:8px;cursor:pointer;}
 @media (pointer:coarse) and (max-aspect-ratio:3/4){.rotate-hint{display:flex;}}
 /* Landscape live game overhaul */
+/* v1.8.24: este media query solo aplica al live game (body.in-live), no a
+   las pantallas de gestión. Antes ocultaba la nav y expandía el #root al
+   girar el móvil EN CUALQUIER pantalla, lo que ocultaba la barra inferior
+   de equipos/hoy/stats al rotar (reportado por Mario). */
 @media (orientation:landscape) and (max-height:500px){
-  body{overflow:hidden;}
-  #root{max-width:100%;height:100dvh;display:flex;flex-direction:column;}
-  .header.live-header{padding:4px 12px;position:sticky;top:0;}
-  .header.live-header .hrow{margin-bottom:0!important;}
-  #live-scoreboard{margin:0!important;}
-  .live-main-col{flex:1;overflow-y:auto;scrollbar-width:none;}
-  .live-main-col::-webkit-scrollbar{display:none;}
+  body.in-live{overflow:hidden;}
+  body.in-live #root{max-width:100%;height:100dvh;display:flex;flex-direction:column;}
+  body.in-live .header.live-header{padding:4px 12px;position:sticky;top:0;}
+  body.in-live .header.live-header .hrow{margin-bottom:0!important;}
+  body.in-live #live-scoreboard{margin:0!important;}
+  body.in-live .live-main-col{flex:1;overflow-y:auto;scrollbar-width:none;}
+  body.in-live .live-main-col::-webkit-scrollbar{display:none;}
   /* Full-width landscape stats */
-  .landscape-stats-wrap{position:fixed;top:0;left:0;right:0;bottom:0;z-index:500;background:var(--bg);display:flex;flex-direction:column;}
-  .landscape-stats-wrap .landscape-stats-inner{flex:1;overflow-y:auto;overflow-x:auto;padding:0 8px 8px;}
-  .stats-table{font-size:10px;}
-  .stats-table th{font-size:8px;padding:4px 3px;}
-  .stats-table td{padding:4px 3px;}
-  .nav{display:none!important;}
+  body.in-live .landscape-stats-wrap{position:fixed;top:0;left:0;right:0;bottom:0;z-index:500;background:var(--bg);display:flex;flex-direction:column;}
+  body.in-live .landscape-stats-wrap .landscape-stats-inner{flex:1;overflow-y:auto;overflow-x:auto;padding:0 8px 8px;}
+  body.in-live .stats-table{font-size:10px;}
+  body.in-live .stats-table th{font-size:8px;padding:4px 3px;}
+  body.in-live .stats-table td{padding:4px 3px;}
+  body.in-live .nav{display:none!important;}
 }
 
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
@@ -471,64 +475,35 @@ input[type="checkbox"]{min-width:20px;min-height:20px;cursor:pointer;}
 label{-webkit-tap-highlight-color:transparent;}
 
 /* ════════════════════════════════════════════════════════════
-   TABLET / RESPONSIVE  —  Phase 1  (≥ 600 px)
-   Centra la columna, amplía modales y sube a 2 columnas
-   las listas de partidos, equipos y jugadores.
+   v1.8.24 — Decisión arquitectónica:
+   La app es 100% mobile-first. Las pantallas de gestión (home,
+   asistencia, equipos, jugadores, partidos, stats) se ven SIEMPRE
+   a 430px max-width centrado, en cualquier dispositivo y
+   orientación. Solo el LIVE GAME aprovecha el viewport extra
+   cuando se gira el móvil/tablet (ver bloque @media landscape
+   más abajo).
+
+   Razón: el coach gira el móvil cuando está en banda viendo el
+   partido, no cuando configura la convocatoria. Mantener tablet
+   responsive para gestión añadía bugs (B-NEW-2 phone landscape) sin
+   aportar valor real al usuario. Las reglas que vivían en
+   @media (min-width: 600/768/1024px) han sido eliminadas a
+   propósito en v1.8.24.
 ════════════════════════════════════════════════════════════ */
-/* v1.8.24 · B-NEW-2: añadimos `and (min-height: 600px)` para que el media
-   query NO se dispare en phone landscape (≥600 ancho × ≤500 alto). Antes,
-   un iPhone Pro Max tumbado (932×430) cumplía min-width:600 y aplicaba la
-   regla de tablet → header se estiraba a 100% pero la team-card se quedaba
-   encajonada a la izquierda. Tablet portrait (768×1024) sigue cumpliendo. */
-@media (min-width: 600px) and (min-height: 600px) {
-  /* 1 · Root ocupa ancho completo — en tablet ya no queda encajonado en 430px */
-  #root{max-width:100%;}
-  /* 1 · Columna central */
-  .content{max-width:700px;margin-left:auto;margin-right:auto;padding-left:24px;padding-right:24px;}
-  .hrow{max-width:700px;margin-left:auto;margin-right:auto;}
-  .nav{max-width:768px;}
-  .modal{max-width:680px;}
-  /* FAB alineado con borde derecho del content */
-  .fab{right:calc(50% - 335px);}
 
-  /* 2 · Grid de tarjetas (partidos / equipos / items) */
-  .cards-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-  .cards-grid .match-card,.cards-grid .team-card{margin-bottom:0;}
-
-  /* 3 · Lista de jugadores en 2 columnas */
-  .card-2col{display:grid;grid-template-columns:1fr 1fr;}
-  .card-2col .pr{border-bottom:1px solid var(--border);border-right:1px solid var(--border);}
-  .card-2col .pr:nth-child(even){border-right:none;}
-  /* quitar borde inferior de los dos últimos items (última fila) */
-  .card-2col .pr:nth-last-child(-n+2):not(:nth-last-child(-n+1) ~ .pr){border-bottom:none;}
-  .card-2col .pr:last-child{border-bottom:none;}
-  .card-2col .pr:nth-last-child(2):not(:nth-child(odd)){border-bottom:none;}
-
-  /* 4 · Tarjetas de stats en 2 columnas */
-  .stats-cards-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-  .stats-cards-grid>div{margin-bottom:0;}
-
-  /* 5 · Scoreboard y elementos visuales */
-  .sb-score{font-size:64px;}
-  .sb-name{font-size:18px;}
-  .scoreboard{padding:18px 20px;}
-
-  /* 6 · Tabla de stats más legible */
-  .stats-table{font-size:12px;}
-  .stats-table th{font-size:10px;padding:6px 5px;}
-  .stats-table td{padding:7px 5px;}
-
-  /* 7 · Header con más aire */
-  .header{padding-left:24px;padding-right:24px;}
-
-  /* 8 · Botones principales más grandes */
-  .btn-p,.btn-s{font-size:16px;padding:14px;}
-}
-
-/* ─── FASE 2 · Live en landscape 2 columnas (≥700px landscape) ─────────── */
-/* ─── FASE 3 · Tablas de stats horizontales en landscape ────────────────── */
+/* ─── LIVE GAME · LANDSCAPE (≥700px landscape) ──────────────────────────
+   Solo el live game escala con la orientación. El resto de pantallas
+   sigue a 430px centradas (ver decisión arquitectónica v1.8.24 arriba).
+   Para que `.live-game-content` pueda crecer hasta 1100 necesitamos que
+   su padre `#root` se libere del límite de 430px en landscape, pero el
+   resto de containers (.header, .content normal, .nav, .modal) se
+   mantienen explícitamente centrados a 430px para que sólo el live se
+   beneficie. */
 @media (min-width:700px) and (orientation:landscape){
-  /* Fase 2: live ocupa todo el ancho disponible */
+  #root{max-width:100%;}
+  .header{max-width:430px;margin-left:auto;margin-right:auto;}
+  .content{max-width:430px;margin-left:auto;margin-right:auto;}
+  /* live game se escapa del 430px gracias al !important */
   .live-game-content{max-width:1100px!important;}
   /* Fase 2: grid marcador izq-arriba / stats izq-abajo / quinteto+acciones der */
   .live-2col{display:grid;grid-template-columns:2fr 3fr;grid-template-rows:auto 1fr;grid-template-areas:"scoreboard court" "stats court";gap:14px;align-items:start;}
@@ -557,43 +532,9 @@ label{-webkit-tap-highlight-color:transparent;}
   .live-2col{grid-template-rows:auto;grid-template-areas:"scoreboard court";}
 }
 
-/* ════════════════════════════════════════════════════════════
-   TABLET MEDIANO  ≥ 768 px  (portrait + landscape)
-   FABs alineados con content de 700px; cards más grandes.
-════════════════════════════════════════════════════════════ */
-@media (min-width: 768px) and (min-height: 600px) {
-  /* v1.8.24 · B-NEW-2: misma protección que el media de 600px — phone
-     landscape no aplica reglas de tablet (alto < 600). */
-  /* FABs: borde derecho del content 700px (50% + 350px - 24px padding) */
-  .fab-add{right:calc(50% - 308px);}
-  .fab{right:calc(50% - 308px);}
-  /* Asistencia: 6 columnas (más cómodo en tablet) */
-  .agrid{grid-template-columns:repeat(6,1fr);}
-  /* Cards de jugadores en pista más grandes */
-  .court-card{padding:11px 6px;}
-  .live-player-pts{font-size:22px;}
-  .live-player-name{max-width:80px;}
-  /* Botones de acción un poco mayores */
-  .action-btn{padding:11px 4px;font-size:12px;}
-  /* Marcador del partido en portrait: ligeramente mayor que el base 62px */
-  .live-score{font-size:70px;}
-}
-
-/* ════════════════════════════════════════════════════════════
-   TABLET GRANDE  ≥ 1024 px  (iPad / Android ≥ 10")
-   Amplía columna de contenido y nav para aprovechar pantalla.
-════════════════════════════════════════════════════════════ */
-@media (min-width: 1024px) and (min-height: 600px) {
-  /* v1.8.24 · B-NEW-2: idem — solo tablet/desktop reales. */
-  .content{max-width:880px;}
-  .hrow{max-width:880px;}
-  .nav{max-width:1024px;}
-  .modal{max-width:800px;}
-  /* Asistencia: 8 columnas */
-  .agrid{grid-template-columns:repeat(8,1fr);}
-  /* Stat grid de 4 cols en home */
-  .stat-grid{grid-template-columns:repeat(4,1fr);}
-}
+/* v1.8.24: bloques @media (min-width: 768/1024) eliminados a propósito.
+   Ver decisión arquitectónica arriba. La gestión vive en mobile-first;
+   solo el live game escala con la orientación. */
 
 /* ════════════════════════════════════════════════════════════
    LIVE GAME · LANDSCAPE TABLET  ≥ 700px × ≥ 501px altura
@@ -2847,6 +2788,10 @@ function render(){
   else if(S.screen==="liveGame")r.innerHTML=liveGame();
   else if(S.screen==="shotMap")r.innerHTML=shotMap();
   else if(S.screen==="matchSummary")r.innerHTML=matchSummaryScreen();
+  // v1.8.24: marcamos el body con la clase 'in-live' solo cuando estamos en
+  // el live game. Lo usan las media queries landscape para aplicar el layout
+  // full-width sólo a esa pantalla, manteniendo el resto a 430px centrado.
+  document.body.classList.toggle("in-live", S.screen==="liveGame");
   requestAnimationFrame(()=>setTimeout(_initCharts,0));
 }
 
