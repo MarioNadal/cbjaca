@@ -505,72 +505,31 @@ label{-webkit-tap-highlight-color:transparent;}
   .content{max-width:430px;margin-left:auto;margin-right:auto;}
   /* live game se escapa del 430px gracias al !important */
   .live-game-content{max-width:1100px!important;}
-
-  /* v1.8.24 · LIVE GAME LANDSCAPE — Layout de 2 columnas tipo "consola":
-     Izquierda  → marcador (full row arriba) + quinteto en pista + banquillo
-     Derecha    → bloque de acciones grandes (puntos / rebotes / faltas...)
-     El coach toca jugador con la mano izquierda y acción con la derecha.
-
-     Estructura HTML:
-       .live-2col
-         .live-scoreboard-wrap    [scoreboard arriba a todo lo ancho]
-         .live-col-r              [display:contents → sus hijos al grid]
-           .live-court-block      [izq fila 2: quinteto en pista]
-           .live-actions-block    [der filas 2-3: acciones grandes]
-           .live-bench-block      [izq fila 3: banquillo colapsable]
-         .live-stats-wrap         [oculto en landscape — stats vía botón 📊] */
-  .live-2col{
-    display:grid;
-    grid-template-columns:0.85fr 1.15fr;
-    grid-template-rows:auto auto auto;
-    grid-template-areas:
-      "scoreboard scoreboard"
-      "court      actions"
-      "bench      actions";
-    gap:8px 10px;
-    align-items:start;
-  }
-  .live-scoreboard-wrap{grid-area:scoreboard;position:sticky;top:0;z-index:5;}
-  .live-col-r{display:contents;}
-  .live-court-block{grid-area:court;min-width:0;}
-  .live-actions-block{grid-area:actions;min-width:0;}
-  .live-bench-block{grid-area:bench;min-width:0;}
-  .live-stats-wrap{display:none;}
-
-  /* Marcador compacto en una fila (Q3 5:42 | 40-34 | F 2-2) */
-  .live-scoreboard{padding:8px 12px;margin-bottom:0;border-radius:10px;}
-  .live-score{font-size:42px;}
+  /* Fase 2: grid marcador izq-arriba / stats izq-abajo / quinteto+acciones der */
+  .live-2col{display:grid;grid-template-columns:2fr 3fr;grid-template-rows:auto 1fr;grid-template-areas:"scoreboard court" "stats court";gap:14px;align-items:start;}
+  /* Fase 2: marcador sticky, stats abajo en col izq, col der ocupa las 2 filas */
+  .live-scoreboard-wrap{grid-area:scoreboard;position:sticky;top:0;}
+  .live-stats-wrap{grid-area:stats;}
+  .live-col-r{grid-area:court;}
+  /* Fase 2: scoreboard compacto en landscape — en móvil el alto es ~375px,
+     el marcador en tamaño portrait (62px score, padding 16px) ocupa ~220px
+     y deja sin espacio a las stats. Se reduce todo para que quepan. */
+  .live-scoreboard{padding:8px 10px;margin-bottom:6px;border-radius:10px;}
+  .live-score{font-size:38px;}
   .live-diff{font-size:11px;padding:1px 6px;margin:2px 0;}
   .live-foul-row{padding:5px 0!important;margin-bottom:5px!important;}
   .qtab-btn{padding:3px 2px;}
 
-  /* Banquillo colapsable: summary visible como botón pulsable */
-  .live-bench-block{cursor:default;}
-  .live-bench-summary{
-    display:flex;align-items:center;justify-content:space-between;
-    padding:10px 12px;background:var(--s2);border:1px solid var(--border);
-    border-radius:10px;font-size:12px;font-weight:700;letter-spacing:1px;
-    text-transform:uppercase;color:var(--td);cursor:pointer;
-    list-style:none;
-  }
-  .live-bench-summary::-webkit-details-marker{display:none;}
-  .live-bench-summary:hover{background:var(--s3);}
-  .live-bench-block[open] .live-bench-summary{margin-bottom:8px;}
-
-  /* Stats inline ocultas; se accede con botón 📊 (modal slide-up Fase 3) */
+  /* Fase 3: pantalla de stats más ancha → tabla de partidos respira */
   .stats-content{max-width:960px!important;}
+  /* Fase 3: tablas de stats más legibles en landscape */
   .stats-table{font-size:13px;}
   .stats-table th{font-size:11px;padding:7px 7px;}
   .stats-table td{padding:8px 7px;}
+  /* Fase 3: en landscape no hace falta el aviso de rotar */
   .live-rotate-hint{display:none;}
-}
-
-/* En portrait el banquillo no es colapsable: el summary se oculta. El
-   <details> se renderiza siempre con `open` así que el contenido se ve
-   sin más. Si el coach lo cierra en landscape y rota a portrait, el
-   listener de orientationchange en el bootstrap lo reabre. */
-@media (orientation:portrait){
-  .live-bench-summary{display:none;}
+  /* Fase 3b: col izq solo tiene el marcador → grid de 1 sola fila */
+  .live-2col{grid-template-rows:auto;grid-template-areas:"scoreboard court";}
 }
 
 /* v1.8.24: bloques @media (min-width: 768/1024) eliminados a propósito.
@@ -6663,33 +6622,18 @@ function liveGame(){
     </div>`:""}
 
       <!-- On Court -->
-      <!-- v1.8.24: bloques separados (court / actions / bench) para que el
-           grid de landscape pueda colocarlos en columnas distintas. En
-           portrait los wrappers son transparentes y todo apila igual. -->
-      <div class="live-court-block">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:${live.activeTeam==='rival'?'#ef4444':t.color}">▶ EN PISTA (${live.activeTeam==='rival'?rivalCourtP.length:courtP.length}/5)</div>
-          <div style="font-size:11px;color:var(--tm)">Toca un jugador → sustituir</div>
-        </div>
-        ${teamOnly
-          ? '<div style="background:rgba(249,115,22,.07);border:1px solid rgba(249,115,22,.2);border-radius:10px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px"><span style="font-size:18px">👥</span><div style="flex:1"><div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--orange)">Modo equipo</div><div style="font-size:12px;color:var(--td);margin-top:1px">Stats globales · sin seguimiento individual</div></div></div>'
-          : '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:10px">'+(live.activeTeam==='rival'?rivalCourtCards:courtCards)+'</div>'
-        }
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:${live.activeTeam==='rival'?'#ef4444':t.color}">▶ EN PISTA (${live.activeTeam==='rival'?rivalCourtP.length:courtP.length}/5)</div>
+        <div style="font-size:11px;color:var(--tm)">Toca un jugador → sustituir</div>
       </div>
-      <div class="live-actions-block">
-        ${teamOnly ? teamActionBlock : actionBlock}
-        ${undoBtn}
-      </div>
+      ${teamOnly
+        ? '<div style="background:rgba(249,115,22,.07);border:1px solid rgba(249,115,22,.2);border-radius:10px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px"><span style="font-size:18px">👥</span><div style="flex:1"><div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--orange)">Modo equipo</div><div style="font-size:12px;color:var(--td);margin-top:1px">Stats globales · sin seguimiento individual</div></div></div>'+teamActionBlock
+        : '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:10px">'+(live.activeTeam==='rival'?rivalCourtCards:courtCards)+'</div>'+actionBlock
+      }
+      ${undoBtn}
 
-      <!-- Bench: <details open> siempre por defecto. En portrait el summary
-           está oculto vía CSS y se ve todo el banquillo. En landscape el
-           summary aparece como botón "Banquillo (N) ▼" pulsable. Si el
-           coach lo cierra en landscape y rota a portrait, un listener
-           de orientation lo vuelve a abrir (ver fin de bootstrap). -->
-      <details class="live-bench-block" open>
-        <summary class="live-bench-summary">Banquillo (${live.activeTeam==="rival"?rivalBenchP.length:benchP.length}) <span style="opacity:.6">▼</span></summary>
-        ${live.activeTeam==="rival"?rivalBenchCards:benchCards}
-      </details>
+      <!-- Bench -->
+      ${live.activeTeam==="rival"?rivalBenchCards:benchCards}
     </div>
 
     <!-- STATS (izq-abajo en landscape, abajo del todo en portrait) ───────── -->
@@ -8819,17 +8763,6 @@ load();
 // Equipos. Ahora arrancan ya en el equipo único.
 if(S.teams.length===1 && !S.teamId){S.teamId=S.teams[0].id;}
 render();checkBackupReminder();
-
-// v1.8.24: en live game landscape el banquillo es colapsable (<details>).
-// Si el coach lo cierra y rota a portrait, el contenido nativo de
-// <details:not([open])> queda oculto y se vería un banquillo vacío. Al
-// rotar a portrait forzamos `open=true` en todos los .live-bench-block
-// para que en vertical el banquillo siempre esté visible.
-try{
-  const _portraitMQ = window.matchMedia("(orientation:portrait)");
-  const _reopenBench = ()=>{ if(_portraitMQ.matches) document.querySelectorAll(".live-bench-block").forEach(d=>{d.open=true;}); };
-  _portraitMQ.addEventListener?.("change", _reopenBench);
-}catch(e){}
 
 // 🧹 Auto-limpieza de datos de prueba residuales (migración a v1.6.0)
 (function(){
