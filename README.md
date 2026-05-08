@@ -9,7 +9,34 @@ Repositorio: [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/
 
 ## Historial de versiones
 
-### v1.8.23 — Responsive completo: tablet portrait + landscape _(actual)_
+### v1.8.24 — Mobile-first puro · landscape solo para live game _(actual)_
+
+**Decisión arquitectónica.** La app es 100% mobile-first para todas las pantallas de gestión (Hoy, Asistencia, Equipos, Partidos, Stats). Solo el seguimiento en vivo del partido se reorganiza al girar el móvil. Tablet portrait/landscape ya **no** intenta aprovechar el ancho extra para gestión: las reglas que se añadieron en v1.8.23 (`@media min-width: 600/768/1024`) introducían más bugs de los que resolvían. Razón: el coach gira el móvil cuando está en banda viendo el partido, no cuando configura la convocatoria.
+
+**B-NEW-4 · Bloqueo de orientación con overlay.** En cualquier pantalla que **no** sea live game, al girar el móvil a horizontal aparece un overlay a pantalla completa con icono giratorio 📱, título "Gira el móvil a vertical" y descripción. Funciona en cualquier dispositivo y navegador (no depende de `screen.orientation.lock()`, que iOS Safari no soporta). Solo cuando estás en live game (`body.in-live`) el overlay se oculta y se ve el layout horizontal.
+
+**B-NEW-3 · La nav inferior reaparece al girar fuera del live game.** El media query `(orientation:landscape) and (max-height:500px)` que existía desde v1.6 ocultaba la nav inferior y expandía `#root` al 100% en **cualquier** pantalla en phone landscape. Ahora condicionado a `body.in-live` — solo se aplica en live game. (En la práctica, con B-NEW-4 el usuario ya no llega a girar fuera del live game porque ve el overlay, pero el fix queda como red de seguridad.)
+
+**B-NEW-2 · Eliminados los media queries de tablet.** Los 3 bloques `@media (min-width: 600/768/1024px)` que se añadieron en v1.8.23 han sido borrados a propósito. La gestión vuelve a 430px centrado en cualquier dispositivo. Decisión documentada en el propio CSS para evitar que un futuro intento las vuelva a meter sin pensarlo.
+
+**B-NEW-1 · Autoasignación de equipo único en bootstrap.** Tras recargar la PWA con un único equipo, `S.teamId` quedaba `null`. La autoasignación al único equipo solo ocurría al entrar a Stats (línea 2912). En Home y Asistencia el coach veía vacío hasta que entraba a Equipos. Ahora se autoasigna en el bootstrap (`load()` → `if(S.teams.length===1 && !S.teamId) S.teamId = S.teams[0].id`) antes del primer `render()`.
+
+**Live game landscape · Layout consola** (rediseño en este release):
+- **Columna izquierda**: marcador arriba, quinteto en pista en el medio, banquillo abajo.
+- **Columna derecha**: bloque de acciones (puntos, rebotes, otros, faltas) ocupando las 3 filas a la altura completa.
+- Header del live (back · reloj · T.M.) full-width 1100px (los demás headers siguen a 430px gracias al overlay).
+- Tamaños adaptativos con `clamp()`: el marcador escala 32px en iPhone landscape → 56px en tablet landscape. Botones de acción y cards on-court también escalan automáticamente. Una sola regla CSS sirve para iPhone, iPad mini, iPad Pro y Samsung tablet sin media queries adicionales.
+- Bloques separados (`.live-court-block` / `.live-actions-block` / `.live-bench-block`) como hijos directos del `.live-2col` grid; sin `display: contents`. En portrait son divs transparentes y se apilan en el mismo orden que antes (scoreboard → court → actions → bench → stats).
+
+**Body class management.** `document.body.classList.toggle("in-live", S.screen==="liveGame")` añadido al final de `render()`. Esta clase la usan: el overlay de orientación, el media query landscape específico del live game y el media query de phone landscape de stats fullscreen.
+
+**Migración.** Los datos en `localStorage` no cambian. El bump de `CACHE_VERSION` invalida la caché del SW para que los clientes reciban el HTML/CSS nuevo en la próxima visita. Bumpado también el `version` del JSON de export a 1.8.24 (estaba stale en 1.8.6 desde hace muchas versiones).
+
+**SW bump.** `CACHE_VERSION = "kortline-v1.8.24"`.
+
+---
+
+### v1.8.23 — Responsive completo: tablet portrait + landscape
 
 Auditoría responsive completa en tablet, iPhone y Android (portrait y landscape):
 

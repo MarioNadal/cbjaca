@@ -52,6 +52,8 @@ La primera vez que abras Kortline en cada plataforma verás un pop-up con el pas
 
 > **🆕 v1.8.4 · Modo offline real.** Tras abrir Kortline una vez con red, la app queda cacheada en el dispositivo. Si en el banquillo no hay cobertura, recargar sigue funcionando: el partido en vivo, el pase de lista y los datos guardados están disponibles offline. La app se actualiza sola cuando vuelves a tener red.
 
+> **🆕 v1.8.24 · Orientación del móvil.** Kortline está pensada en vertical para todo lo que es gestión: pase de lista, equipos, partidos, estadísticas. **Solo el seguimiento en vivo del partido se puede usar en horizontal** (para tener el marcador grande, el quinteto y todas las acciones cómodas a la vez). Si giras el móvil estando en cualquier otra pantalla verás un overlay 📱 "Gira el móvil a vertical" — vuelve a vertical y todo continúa donde lo dejaste.
+
 ### 2.2 Configuración del club
 
 Pulsa el **logo** arriba a la izquierda para abrir ⚙️ **Ajustes del club**.
@@ -744,9 +746,18 @@ En la tabla del live (a pantalla completa girando el móvil):
 
 La fila de **Totales** muestra los agregados con eFG% y EFF también calculados.
 
-### 9.2 Pantalla completa por giro (v1.8.0)
+### 9.2 Live game en horizontal (v1.8.0 · rediseñado en v1.8.24)
 
-**Gira el móvil a horizontal** estando en el live game → se abre automáticamente el overlay de stats a pantalla completa con todas las columnas. Al volver a vertical se cierra solo. Sin botón manual — más limpio y resuelve el problema del botón "atrás" detrás de la barra de notificaciones.
+Estando en el seguimiento en vivo del partido, **gira el móvil a horizontal** y la pantalla se reorganiza en modo consola:
+
+- **Columna izquierda**: marcador arriba, los 5 jugadores en pista en el medio (toca uno para sustituir), banquillo abajo.
+- **Columna derecha**: todas las acciones (Puntos · Rebotes · Otros · Faltas) en una sola columna.
+- El header se vuelve full-width con el reloj y los botones de partido.
+- Las stats individuales pasan a abrirse desde el botón 📊 del header (modal slide-up con cards o tabla).
+
+Al volver a vertical, la pantalla se reapila como siempre. Tamaños adaptativos: una misma vista escala correctamente en iPhone, iPad mini, iPad Pro y tablet Samsung sin configuraciones extra.
+
+> Recordatorio: solo esta pantalla del live game permite girarse. En el resto de pantallas verás el overlay "Gira el móvil a vertical".
 
 ### 9.3 Pantalla de estadísticas globales
 
