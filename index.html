@@ -475,7 +475,12 @@ label{-webkit-tap-highlight-color:transparent;}
    Centra la columna, amplía modales y sube a 2 columnas
    las listas de partidos, equipos y jugadores.
 ════════════════════════════════════════════════════════════ */
-@media (min-width: 600px) {
+/* v1.8.24 · B-NEW-2: añadimos `and (min-height: 600px)` para que el media
+   query NO se dispare en phone landscape (≥600 ancho × ≤500 alto). Antes,
+   un iPhone Pro Max tumbado (932×430) cumplía min-width:600 y aplicaba la
+   regla de tablet → header se estiraba a 100% pero la team-card se quedaba
+   encajonada a la izquierda. Tablet portrait (768×1024) sigue cumpliendo. */
+@media (min-width: 600px) and (min-height: 600px) {
   /* 1 · Root ocupa ancho completo — en tablet ya no queda encajonado en 430px */
   #root{max-width:100%;}
   /* 1 · Columna central */
@@ -556,7 +561,9 @@ label{-webkit-tap-highlight-color:transparent;}
    TABLET MEDIANO  ≥ 768 px  (portrait + landscape)
    FABs alineados con content de 700px; cards más grandes.
 ════════════════════════════════════════════════════════════ */
-@media (min-width: 768px) {
+@media (min-width: 768px) and (min-height: 600px) {
+  /* v1.8.24 · B-NEW-2: misma protección que el media de 600px — phone
+     landscape no aplica reglas de tablet (alto < 600). */
   /* FABs: borde derecho del content 700px (50% + 350px - 24px padding) */
   .fab-add{right:calc(50% - 308px);}
   .fab{right:calc(50% - 308px);}
@@ -576,7 +583,8 @@ label{-webkit-tap-highlight-color:transparent;}
    TABLET GRANDE  ≥ 1024 px  (iPad / Android ≥ 10")
    Amplía columna de contenido y nav para aprovechar pantalla.
 ════════════════════════════════════════════════════════════ */
-@media (min-width: 1024px) {
+@media (min-width: 1024px) and (min-height: 600px) {
+  /* v1.8.24 · B-NEW-2: idem — solo tablet/desktop reales. */
   .content{max-width:880px;}
   .hrow{max-width:880px;}
   .nav{max-width:1024px;}
@@ -8802,7 +8810,14 @@ function _confirm(msg, confirmLabel, onConfirm){
   document.body.appendChild(el);
 }
 
-load();render();checkBackupReminder();
+load();
+// v1.8.24 · B-NEW-1: si sólo hay un equipo, autoasignar `S.teamId` antes
+// del primer render. Antes la autoasignación sólo ocurría al entrar a Stats
+// (helper viewTeams), por lo que tras recargar la PWA con un único equipo,
+// Home y Asistencia veían `teamId=null` hasta que el coach pasaba por
+// Equipos. Ahora arrancan ya en el equipo único.
+if(S.teams.length===1 && !S.teamId){S.teamId=S.teams[0].id;}
+render();checkBackupReminder();
 
 // 🧹 Auto-limpieza de datos de prueba residuales (migración a v1.6.0)
 (function(){
