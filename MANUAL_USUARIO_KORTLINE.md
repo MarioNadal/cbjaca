@@ -746,18 +746,15 @@ En la tabla del live (a pantalla completa girando el móvil):
 
 La fila de **Totales** muestra los agregados con eFG% y EFF también calculados.
 
-### 9.2 Live game en horizontal (v1.8.0 · rediseñado en v1.8.24)
+### 9.2 Live game en horizontal · modo lectura (v1.8.0 · v1.8.24)
 
-Estando en el seguimiento en vivo del partido, **gira el móvil a horizontal** y la pantalla se reorganiza en modo consola:
+Toda la operativa del partido — registrar acciones, sustituir, ajustar el marcador, gestionar tiempos muertos — se hace **siempre en vertical**. Es el flujo natural cuando estás de pie en banda con el móvil en una mano.
 
-- **Columna izquierda**: marcador arriba, los 5 jugadores en pista en el medio (toca uno para sustituir), banquillo abajo.
-- **Columna derecha**: todas las acciones (Puntos · Rebotes · Otros · Faltas) en una sola columna.
-- El header se vuelve full-width con el reloj y los botones de partido.
-- Las stats individuales pasan a abrirse desde el botón 📊 del header (modal slide-up con cards o tabla).
+**Si giras el móvil a horizontal estando en live game**, la pantalla cambia automáticamente a **modo lectura**: aparece la tabla de estadísticas a pantalla completa con todas las columnas (PTS, T2, T3, TL, RB, AS, ROB, TAP, PER, FAL, MIN, EFF) para que puedas mirar de un vistazo cómo va el partido. Al volver a vertical, vuelves al seguimiento operativo donde lo dejaste.
 
-Al volver a vertical, la pantalla se reapila como siempre. Tamaños adaptativos: una misma vista escala correctamente en iPhone, iPad mini, iPad Pro y tablet Samsung sin configuraciones extra.
+> El modo horizontal está pensado solo para consultar — no para registrar. Si necesitas tocar un botón, gira a vertical primero.
 
-> Recordatorio: solo esta pantalla del live game permite girarse. En el resto de pantallas verás el overlay "Gira el móvil a vertical".
+> Recordatorio: solo el live game tiene este modo lectura horizontal. En el resto de pantallas (Hoy, Equipos, Asistencia, Stats) verás el overlay "Gira el móvil a vertical" si rotas el dispositivo.
 
 ### 9.3 Pantalla de estadísticas globales
 

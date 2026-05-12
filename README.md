@@ -21,14 +21,19 @@ Repositorio: [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/
 
 **B-NEW-1 · Autoasignación de equipo único en bootstrap.** Tras recargar la PWA con un único equipo, `S.teamId` quedaba `null`. La autoasignación al único equipo solo ocurría al entrar a Stats (línea 2912). En Home y Asistencia el coach veía vacío hasta que entraba a Equipos. Ahora se autoasigna en el bootstrap (`load()` → `if(S.teams.length===1 && !S.teamId) S.teamId = S.teams[0].id`) antes del primer `render()`.
 
-**Live game landscape · Layout consola** (rediseño en este release):
-- **Columna izquierda**: marcador arriba, quinteto en pista en el medio, banquillo abajo.
-- **Columna derecha**: bloque de acciones (puntos, rebotes, otros, faltas) ocupando las 3 filas a la altura completa.
-- Header del live (back · reloj · T.M.) full-width 1100px (los demás headers siguen a 430px gracias al overlay).
-- Tamaños adaptativos con `clamp()`: el marcador escala 32px en iPhone landscape → 56px en tablet landscape. Botones de acción y cards on-court también escalan automáticamente. Una sola regla CSS sirve para iPhone, iPad mini, iPad Pro y Samsung tablet sin media queries adicionales.
-- Bloques separados (`.live-court-block` / `.live-actions-block` / `.live-bench-block`) como hijos directos del `.live-2col` grid; sin `display: contents`. En portrait son divs transparentes y se apilan en el mismo orden que antes (scoreboard → court → actions → bench → stats).
+**B-NEW-5 · Contraste de los círculos de faltas y T.M. del scoreboard live.** Los círculos vacíos (faltas pendientes, T.M. no usados) se generaban con border `+col+'66'` — alpha 0.4 sobre el fondo dark `#070f1e`. El rojo del rival se distinguía aún, pero el naranja del propio equipo (`#F06318`) quedaba prácticamente invisible. El bug era especialmente notorio cuando jugábamos de **visitante**, porque nuestro equipo (naranja) pasa al lado derecho del scoreboard — el coach reportaba que "no se ven las faltas de tu equipo cuando es visitante, ni los tiempos muertos". Subido el alpha de los dots vacíos a `'d9'` (0.85). Aplicable a todos los partidos; afecta tanto a F.EQP. como a T.M.
+
+**Live game landscape · Modo lectura de stats fullscreen** (recuperando comportamiento de v1.8.0). Después de varios intentos fallidos de hacer un layout horizontal "operativo" para el live game (marcador + quinteto + acciones tumbado), se llegó a una conclusión simple: la app es móvil y vertical de principio a fin. **Toda la operativa del partido (registrar acciones, sustituir, marcador) se hace solo en vertical.** Cuando el coach gira el móvil estando en live game, en lugar de reorganizar la pantalla se muestra automáticamente la tabla de estadísticas a pantalla completa como **modo lectura** — útil para ver de un vistazo cómo va el partido con todas las columnas (PTS, T2, T3, TL, RB, AS, ROB, TAP, PER, FAL, MIN, EFF). Al volver a vertical se cierra solo. El header, scoreboard, quinteto y acciones se ocultan en landscape porque no se va a operar; solo se va a leer.
+
+Implementación: en `@media (orientation:landscape)`, si `body.in-live`, se ocultan `.header`, `.nav`, `.live-scoreboard-wrap` y `.live-col-r`, y se promueve `.live-stats-wrap` a overlay fullscreen con `position:fixed; inset:0`.
 
 **Body class management.** `document.body.classList.toggle("in-live", S.screen==="liveGame")` añadido al final de `render()`. Esta clase la usan: el overlay de orientación, el media query landscape específico del live game y el media query de phone landscape de stats fullscreen.
+
+**Listener de orientación.** Al rotar el móvil se dispara `render()` con un pequeño defer (50ms) para asegurar un DOM limpio. Resuelve transiciones visuales raras cuando el usuario está en live game horizontal (modo lectura) y pulsa el botón atrás del navegador/dispositivo: el cambio de `S.screen` + el cambio de `orientation` pueden dejar restos visuales si el navegador no repinta a tiempo.
+
+**Pista "🔄 gira para ver completa" eliminada.** Estaba dentro de `.live-stats-wrap` y desde v1.8.20 ya no aplicaba (la tabla inline está oculta en portrait y se promueve a fullscreen automática en landscape).
+
+**Texto del overlay de orientación más explícito.** Antes "Gira el móvil a vertical" + descripción genérica. Ahora "Pon el móvil en vertical" + descripción que explica claramente que solo el live game permite horizontal y solo para ver stats.
 
 **Migración.** Los datos en `localStorage` no cambian. El bump de `CACHE_VERSION` invalida la caché del SW para que los clientes reciban el HTML/CSS nuevo en la próxima visita. Bumpado también el `version` del JSON de export a 1.8.24 (estaba stale en 1.8.6 desde hace muchas versiones).
 
