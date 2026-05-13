@@ -1,6 +1,6 @@
 # Kortline — Manual de Usuario
 
-**Versión 1.8.3** · _De la pista al dato_
+**Versión 1.0.0** · _De la pista al dato_
 
 > 🏀 Kortline es la PWA del **CB Jaca** para gestionar asistencia, partidos y estadísticas avanzadas desde el banquillo. Funciona offline en cualquier móvil, no necesita servidor y todos los datos viven en tu navegador. Diseño dark, mobile-first, paleta naranja `#F06318` y navy `#070f1e`.
 
@@ -15,7 +15,7 @@
 5. [Lesiones 🚑](#5-lesiones-)
 6. [Pase de lista (entrenamiento)](#6-pase-de-lista-entrenamiento)
 7. [Día de partido](#7-día-de-partido)
-8. [Modo Pro Shot Chart 🎯](#8-modo-pro-shot-chart-)
+8. [Shot Chart (próximamente en v2.0)](#8-shot-chart-próximamente-en-v20)
 9. [Estadísticas](#9-estadísticas)
 10. [Backup y datos](#10-backup-y-datos)
 11. [Tips Pro](#11-tips-pro)
@@ -29,9 +29,9 @@ Kortline cubre el ciclo completo de un equipo de baloncesto amateur:
 
 - **Diario**: pase de lista, valoraciones, ejercicios.
 - **Semanal**: convocatorias, calendario.
-- **Partido**: live game con marcador, faltas, TM, sustituciones, shot chart.
-- **Temporada**: stats agregadas, riesgo FEB, mapa de tiros agregado.
-- **Compartir**: WhatsApp, exportar PDF/Excel/PNG, JSON de backup.
+- **Partido**: convocatoria, resultado por cuartos editable, estadísticas post-partido.
+- **Temporada**: stats agregadas, riesgo FEB.
+- **Compartir**: WhatsApp, exportar PDF/Excel, JSON de backup.
 
 Todo en un **único archivo HTML** que vive en tu móvil. Sin servidor. Sin cuentas. Tus datos son tuyos.
 
@@ -52,7 +52,7 @@ La primera vez que abras Kortline en cada plataforma verás un pop-up con el pas
 
 > **🆕 v1.8.4 · Modo offline real.** Tras abrir Kortline una vez con red, la app queda cacheada en el dispositivo. Si en el banquillo no hay cobertura, recargar sigue funcionando: el partido en vivo, el pase de lista y los datos guardados están disponibles offline. La app se actualiza sola cuando vuelves a tener red.
 
-> **🆕 v1.8.24 · Orientación del móvil.** Kortline está pensada en vertical para todo lo que es gestión: pase de lista, equipos, partidos, estadísticas. **Solo el seguimiento en vivo del partido se puede usar en horizontal** (para tener el marcador grande, el quinteto y todas las acciones cómodas a la vez). Si giras el móvil estando en cualquier otra pantalla verás un overlay 📱 "Gira el móvil a vertical" — vuelve a vertical y todo continúa donde lo dejaste.
+> **📱 Orientación del móvil.** Kortline está pensada en vertical para todas sus pantallas. Si giras el móvil verás un overlay 📱 "Pon el móvil en vertical" — vuelve a vertical y todo continúa donde lo dejaste.
 
 ### 2.2 Configuración del club
 
@@ -95,7 +95,7 @@ La pantalla de inicio. Muestra solo lo del día actual.
 │  ┌─────────────────────────────┐    │
 │  │ Sénior  vs  Bilbao          │    │
 │  │ 20:00 · 🟢 Casa             │    │
-│  │ [▶ Empezar/Continuar] [📋]  │    │
+│  │ [✏️ Anotar partido] [📋]    │    │
 │  └─────────────────────────────┘    │
 │                                     │
 │  🏋️ ENTRENAMIENTOS                  │
@@ -318,10 +318,10 @@ Equipo → **Partidos** → **＋ Añadir partido**:
 
 | Toggle | Defecto | Para qué |
 |--------|---------|----------|
-| 📊 Estadísticas del rival | OFF | Anota stats jugador a jugador del rival (requiere registrar sus jugadores) |
+| 📊 Estadísticas del rival | OFF | Permite anotar stats post-partido jugador a jugador del rival (requiere registrar sus jugadores) |
 | 👥 Solo stats del equipo | OFF | No registra stats individuales, solo totales |
-| ⏱ Reloj se para con falta | ON en sénior/junior/cadete/infantil/alevín, OFF en 3x3/otro | FIBA estricto: cualquier falta detiene el reloj (v1.6.13) |
-| 🎯 Modo Shot Chart [PRO] | OFF | Captura coordenadas de cada tiro de campo en cancha SVG (v1.7.0, ver sección 8) |
+
+> Otros toggles relacionados con el seguimiento en vivo (reloj que se para con falta, modo Shot Chart) llegarán con la v2.0. En v1.0.0 estos no aparecen.
 
 ### 7.2 Convocatoria
 
@@ -382,381 +382,96 @@ Los **bloqueantes** no permiten seguir. Los **avisos** sí — puedes ignorarlos
 
 #### Paso 2 — Rival (opcional)
 
-Si activaste 📊 Estadísticas del rival, añade aquí los dorsales y nombres del rival. Es lo que permite asignar TLs y faltas a jugadores rivales concretos en el live.
+Si activaste 📊 Estadísticas del rival, añade aquí los dorsales y nombres del rival. Es lo que permite anotar stats individuales del rival (puntos, faltas, etc.) en el detalle del partido al terminar.
 
-### 7.3 Live game — Modo Banco (v1.7.2)
+### 7.3 Anotar el partido (resultado por cuartos)
 
-Cambio de paradigma desde v1.7.2: el flujo es **acción → jugador**, no al revés.
+En v1.0.0 el partido se anota a mano desde el detalle del partido. El botón "✏️ Anotar partido" de la home (o "📋 Editar" desde la card del partido) lleva al detalle, donde encuentras:
 
 ```
 ┌─────────────────────────────────────┐
-│  ←  🔴 EN VIVO · Q1   [BONUS] [F:5/4] [📍] [📤] [🏁]
-│     CASADEMONT vs BILBAO             │
-│  ┌──────────────────────────────────┐│
-│  │ 10:00 ✏️    [▶ play] [↺] [T.M] ││   ← Reloj
-│  └──────────────────────────────────┘│
+│  ←  Detalle del partido      [📤]   │
+│     CB JACA vs BILBAO                │
+│     sábado, 25 abr · 20:00           │
 ├─────────────────────────────────────┤
-│  CASADEMONT [12]:[8] BILBAO          │   ← Marcador
-│  FALTAS ●●○○○        FALTAS ●●●○○    │
-│  T.M.   ●○                ○○ T.M.    │
-│  ┌─Q1─┐ ┌─Q2─┐ ┌─Q3─┐ ┌─Q4─┐         │   ← Cuartos
-│  │ 12 │ │  🔒│ │  🔒│ │  🔒│         │     v1.7.9
-│  └────┘ └────┘ └────┘ └────┘         │
-├─────────────────────────────────────┤
-│  ▶ EN PISTA (5/5)  Toca para sustituir
-│  ┌─#4─┐┌─#5─┐┌─#11┐┌─#7─┐┌─#10┐      │
-│  │ 8  ││ 4  ││ 0  ││ 2  ││ 6  │      │
-│  │Carl││Dieg││Eva ││Feli││Javi│      │
-│  └────┘└────┘└────┘└────┘└────┘      │
-├─────────────────────────────────────┤
-│  ⚡ ACCIONES                         │
-│  ⚡ PUNTOS                           │
-│  [+2] [+3] [+1 TL]                  │
-│  [✗2] [✗3] [✗ TL]                   │
-│  📦 REBOTES                          │
-│  [OF] [DEF]                         │
-│  🎯 OTROS                            │
-│  [AST] [ROB] [TAP] [PER]            │
-│  🤚 FALTAS                F:5/4 BONUS│   ← Badge dinámico
-│  [FALT] [TÉC] [ANT] [DESC]          │     v1.6.15
+│  📋 Convocatoria  → [Editar]         │
+│                                     │
+│  🏀 RESULTADO POR CUARTOS            │
+│  ┌───┬───┬───┬───┬───────┐          │
+│  │Q1 │Q2 │Q3 │Q4 │ TOTAL │          │
+│  │ - │ + │   │   │       │          │
+│  │ 8 │16 │14 │12 │  50   │ ← Local  │
+│  │   │   │   │   │       │          │
+│  │ - │ + │   │   │       │          │
+│  │10 │14 │12 │11 │  47   │ ← Rival  │
+│  └───┴───┴───┴───┴───────┘          │
+│                                     │
+│  ➕ Añadir prórroga                  │
+│                                     │
+│  📝 Notas del partido                │
+│                                     │
+│  📊 Estadísticas post-partido        │
 └─────────────────────────────────────┘
 ```
 
-#### 7.3.1 Cómo registrar acciones
+#### 7.3.1 Resultado por cuartos
 
-1. **Toca la acción** en el banner (por ejemplo +3 Triple).
-2. Modal **¿Quién?** con 5 botones grandes del quinteto.
-3. Tocas el jugador.
-4. (Si shot chart está ON) → tocar zona de la cancha (sección 8).
-5. **Encadenamientos automáticos** opcionales:
-   - Tras canasta → modal **🎁 ¿Asistencia?** con los otros 4 + Saltar.
-   - Tras fallo (✗2/✗3/✗TL) → modal **📦 ¿Rebote?** con los 5 + 🔴 Rebote del rival + Saltar.
+Cada cuarto tiene un stepper +/− por equipo (nuestro y rival). Tres formas de introducir los puntos:
 
-> 💡 **Las cards del quinteto NO registran acciones.** Tocarlas abre el modal de sustitución (ver 7.3.2).
+- **Botón +** suma uno al cuarto.
+- **Botón −** resta uno.
+- **Tocar el número** abre teclado para escribir el valor directo.
 
-#### 7.3.2 Sustituciones
+El total se calcula automáticamente al pie de cada columna. Si el partido termina en empate puedes pulsar **➕ Añadir prórroga** para sumar OT1, OT2… con el mismo stepper.
 
-Al tocar una card del quinteto:
+> 💡 Si tenías partidos de versiones anteriores con datos del seguimiento en vivo, el resultado por cuartos aparecerá rellenado automáticamente desde esos datos. Aún así puedes corregir cualquier valor a mano.
 
-```
-↔ Sustitución
-SALE: #4 Carlos Uno
+#### 7.3.2 Estadísticas post-partido
 
-¿Quién entra?
-  #6 Hugo
-  #33 Helena
-  ...
-```
+Debajo del resultado encontrarás la sección de estadísticas individuales. Por cada jugador convocado puedes anotar:
 
-Lista del banquillo válido (los descalificados aparecen en gris y no son seleccionables). Si hay descalificación forzosa, el modal lo abre la app sin que toques nada (sección 7.3.5).
+- Puntos (1, 2 y 3 anotados / intentados).
+- Rebotes (ofensivos y defensivos).
+- Asistencias, robos, tapones, pérdidas.
+- Faltas (personales, técnicas, antideportivas, descalificantes).
 
-> Para llevar al rival a otro jugador (si hay rivalPlayers), toca el toggle CASADEMONT/BILBAO arriba.
+Los totales por equipo se calculan automáticamente. Estas estadísticas alimentan la pantalla **📊 Stats** del equipo (sección 9).
 
-#### 7.3.3 Sección 🤚 Faltas (v1.6.15)
+#### 7.3.3 Notas del partido
 
-Caja propia del banner con cuatro botones:
+Campo libre para escribir el resumen del partido, comentarios sobre el rival, ajustes tácticos, etc. Se guarda con el patrón de dirty tracking habitual: si sales con cambios sin guardar verás el aviso.
 
-| Acción | Default TL | Cuándo |
-|--------|------------|--------|
-| **FALT** Personal | Sin TL si no bonus / 2 TL si bonus | Falta normal |
-| **TÉC** Técnica | 1 TL + posesión (FIBA 2024-25) | Protesta, demora, banquillo |
-| **ANT** Antideportiva | 2 TL + posesión | Contacto excesivo, intencional |
-| **DESC** Descalificante | 2 TL + posesión + expulsión | Agresión, segunda antideportiva |
+#### 7.3.4 Compartir el partido
 
-**Badge dinámico** a la derecha del título:
+Botón **📤** en el header del detalle. Genera un mensaje de WhatsApp con el marcador, los parciales por cuarto y un mini-resumen de la convocatoria.
 
-- `F:0/4` (gris) — sin bonus aún.
-- `F:4/4 · PRÓX BONUS` (amarillo) — la siguiente falta tirará TL.
-- `F:5 · BONUS` (verde) — ya en bonus.
-
-#### 7.3.4 Modal de tiros libres inteligente (v1.6.15)
-
-El modal calcula default según contexto:
-
-- Personal sin bonus → **Sin TL** preseleccionado.
-- Personal en bonus → **2 TL** + banner verde `⚠️ BONUS · esta falta tira 2 TL`.
-- Técnica → **1 TL**.
-- Antideportiva / Descalificante → **2 TL**.
-
-Tras elegir nº TL > 0 → modal granular **tiro a tiro** (v1.7.1):
-
-```
-🎯 Tiros libres
-3 tiros — toca los que entran
-[✗] [✗] [✗]   ← arrancan todos en fallado
-[Guardar (0/3 entran)]   ← se actualiza al tocar
-```
-
-Cada toque cambia ✗ → ✓. Otro toque vuelve a ✗. Por defecto **todos fallados** (la mayoría suelen fallar) — solo tocas los que entran. Botón final con conteo en tiempo real.
-
-#### 7.3.5 Faltas del rival → tiros libres NUESTROS (v1.7.1)
-
-Cuando el rival comete falta — tocando el `+` de FALTAS rival en el header o asignándola a un jugador rival concreto — Kortline abre automáticamente:
-
-1. Picker del **tirador nuestro**: lista con dos secciones **EN PISTA** (los 5 actuales, resaltados) y **BANQUILLO** (los demás convocados).
-2. Nº de TL con default según bonus rival y banner verde si aplica.
-3. Modal granular ✗ default tras elegir nº.
-
-Si entra el TL, los puntos suman a nuestro marcador y a `stats[pid].p1m` del jugador. Si fallan, suman a `p1a`.
-
-#### 7.3.6 Sustitución forzosa tras descalificación (v1.7.5)
-
-Cuando una falta descalifica al jugador (5 personales, 2 técnicas, 2 antideportivas, 1 técnica + 1 antideportiva, o 1 descalificante directa) y está en pista, se abre automáticamente:
-
-```
-⛔ Descalificado
-2 faltas técnicas
-
-⬇️ SALE: #5 Diego Dos
-
-ELIGE SUSTITUTO DEL BANQUILLO
-[#7 Felipe (0 faltas)]
-[#33 Helena (2 faltas)]
-...
-```
-
-**Sin botón Cancelar.** Tienes que elegir un sustituto sí o sí. Excepción única: si todo el banquillo está descalificado, aparece aviso `⚠️ Banquillo agotado · continuarás con menos jugadores en pista` + botón único `OK, sacar sin sustituir`.
-
-#### 7.3.7 Reloj y tiempos muertos
-
-**Reloj** — botón ▶/⏸ para iniciar/pausar, ↺ para resetear, toca el tiempo para editarlo manualmente. Avisos visuales a 2:00, 1:00, 30s y 10s.
-
-**Reloj se para con falta (v1.6.13).** Si el toggle del partido está ON, registrar una falta para automáticamente el reloj y muestra toast `⏱ Reloj parado por falta`.
-
-**Tiempos muertos** — botón **T.M** abre overlay pantalla completa con:
-- Cuenta atrás 1:00.
-- Reloj de juego pausado.
-- Dots por equipo y mitad (2 en H1, 3 en H2, regla FEB amateur).
-- Sustituciones del quinteto durante el TM.
-- Botón ▶ Reanudar para terminar antes.
-
-#### 7.3.8 Cuartos bloqueados (v1.7.9)
-
-Los tabs **Q2 / Q3 / Q4** aparecen **en gris al 45% de opacidad** con icono **🔒** mientras no hayas llegado a ellos. No reaccionan al click — toast `⚠️ Aún no has llegado a Qx`.
-
-#### 7.3.9 Confirmación al editar un cuarto pasado (v1.8.5)
-
-Si tocas la pestaña de un cuarto distinto al actual (típico al hacer scroll en las pestañas Q1/Q2/...), aparece confirmación:
-
-> ⚠️ Estás en **Q3**. ¿Editar **Q1**?
-> Las acciones que registres se guardarán en Q1.
->
-> [Editar Q1] · [Cancelar]
-
-Solo afecta a cuartos **ya jugados** (los bloqueados con 🔒 siguen sin reaccionar). Cambiar al cuarto actual no necesita confirmación.
-
-#### 7.3.10 Toast al entrar en bonus (v1.8.5)
-
-Al cruzar la 5ª falta de equipo en un cuarto se dispara una sola vez:
-
-> 🚨 BONUS activo · próxima falta = 2 TL
-
-La sección 🤚 Faltas mantiene el badge "BONUS" estático mientras el cuarto siga en bonus; el toast es solo el aviso del **momento exacto del cruce**.
-
-#### 7.3.11 🚀 Modo rápido (v1.8.5)
-
-Toggle nuevo en ⚙️ Ajustes → "Modo rápido (live game)":
-
-> **🚀 Sin preguntas de cadena**
-> Tras anotar canasta o fallo, NO preguntará por asistencia/rebote. Más rápido si solo registras lo esencial.
-
-Default OFF. Útil cuando el ritmo del partido va alto y solo te interesa el marcador + stats básicas. Las stats de asistencias y rebotes se siguen pudiendo registrar manualmente desde el banner.
-
-#### 7.3.12 Selector de equipo on-court mejorado (v1.8.5)
-
-El toggle "Nosotros / Rival" del live game ahora muestra:
-
-- **Punto de color** del equipo (con borde blanco si está activo).
-- **Abreviatura** si la has configurado (ej. `JAC` en lugar de `CB Jaca Sénior`).
-- **Truncado inteligente** que prefiere la primera palabra significativa antes de cortar con "…":
-  - `Casademont Zaragoza` → `Casademont`
-  - `Surne Bilbao` → `Surne Bilbao` (cabe entero)
-  - `I.A.U.D Tarazona` → `I.A.U.D`
-
-Cuando el reloj llega a 0 al final del Q1, se desbloquea Q2; etc. Puedes volver a un cuarto pasado para revisar o añadir acciones.
-
-#### 7.3.9 Descansos entre cuartos
-
-| Cuándo | Duración |
-|--------|----------|
-| Entre cuartos (Q1↔Q2, Q3↔Q4) | 1 minuto fijo |
-| Medio tiempo (Q2↔Q3) | 10 min por defecto, **configurable en el momento** |
-
-**Selector de medio tiempo (v1.6.14).** Al terminar el Q2, encima del botón **▶ Iniciar Medio tiempo** aparece:
-
-```
-DURACIÓN DEL MEDIO TIEMPO
-[1'] [3'] [5'] [10'] [15'] [⚙ Otro]
-```
-
-Toca la pildora que quieras (10' por defecto). **⚙ Otro** abre prompt para 1–30 min. La elección solo afecta a este descanso.
-
-Durante el descanso aparece overlay con cuenta atrás y mensaje "Próximo: Q3". Botón **▶ Iniciar Q3** para terminar antes.
-
-#### 7.3.10 Prórroga automática
-
-Al llegar a 0 el reloj del último cuarto **en empate**, aparece automáticamente:
-
-```
-🤝 ¡EMPATE!
-Fin del Q4 · 47 — 47
-¿Se juega prórroga?
-[🏀 Jugar OT]   [🏁 Finalizar partido]
-```
-
-Cada OT dura **5 minutos**. Las **faltas de equipo en OT continúan del Q4** (regla FIBA 37.2 — no se resetean) (v1.6.13/v1.6.14).
-
-#### 7.3.11 "Continuar partido" desde la 1ª vez (v1.7.9)
-
-Una vez has entrado al live game al menos una vez (aunque no hayas registrado nada), el botón en HOY y matchDetail pasa a **🔴 Continuar partido / Continuar en vivo** (rojo). El badge "🔴 EN JUEGO" y el marcador se mantienen restrictivos: solo aparecen cuando hay actividad real.
+> El seguimiento en vivo del partido (scoreboard live, faltas en directo, tiempos muertos, quinteto en pista, shot chart en tiempo real) está reservado para **v2.0**. En v1.0.0 el flujo es: convocar, jugar, abrir el detalle al terminar y anotar el resultado por cuartos a mano.
 
 ---
 
-## 8. Modo Pro Shot Chart 🎯
+## 8. Shot Chart (próximamente en v2.0)
 
-Iteración Pro de Kortline para clubes que quieren analítica avanzada de tiros.
-
-### 8.1 Activar
-
-En el modal de **Crear/Editar partido**, toggle **🎯 Modo Shot Chart [PRO]**. Solo afecta al partido en curso. Default OFF.
-
-### 8.2 Captura de cada tiro
-
-Cuando está ON y pulsas **+2 / +3 / ✗2 / ✗3** en el banner de acciones (tras elegir jugador), se abre la cancha SVG a pantalla completa:
-
-```
-┌─────────────────────────────────────┐
-│  🎯 SHOT CHART        [✕ Cancelar]   │
-│  Carlos #4                           │
-│  ┌─────────────────────────────────┐ │
-│  │ +2 Canasta — Pulsa la zona      │ │
-│  └─────────────────────────────────┘ │
-│       ┌────────────────┐             │
-│       │ [cancha SVG]   │             │
-│       │   semi cancha  │             │
-│       │   con líneas   │             │
-│       │   FIBA reales  │             │
-│       └────────────────┘             │
-│  Si tocas fuera del arco con +2,     │
-│  te avisaremos antes de cambiar.     │
-└─────────────────────────────────────┘
-```
-
-Tocas la zona donde se hizo el tiro → registra coordenadas y cierra. Si hay **discrepancia** entre el botón pulsado y la zona detectada (`+2` pero zona de 3, o viceversa) aparece pre-aviso (v1.7.4):
-
-```
-⚠️ Zona y tipo no coinciden
-
-Pulsaste Canasta de 2 pero la zona donde
-tocaste está fuera del arco de 3.
-
-[✓ Registrar como Triple anotado]
-[↺ Volver a tocar zona de 2p]
-```
-
-- **✓ Registrar como triple** → cambia el valor según la zona.
-- **↺ Volver a tocar** → reabre la cancha. Tienes que tocar zona consistente con el +2 original.
-
-> Garantía: ningún shot guardado tiene coordenadas inconsistentes con su valor.
-
-### 8.3 Mapa de tiros 📍
-
-Botón **📍** en el header del live game (visible si shotChart=ON) y en el detalle del partido finalizado. También accesible desde HOY si el partido está activo.
-
-```
-┌─────────────────────────────────────┐
-│  ←  📍 Mapa de tiros        [📤]    │
-│     CASADEMONT vs BILBAO             │
-├─────────────────────────────────────┤
-│  [🎯 Puntos]   [🔥 Heatmap zonas]    │   ← v1.8.2
-│  [📅 Este partido]  [🗓 Temporada]   │   ← v1.8.2
-├─────────────────────────────────────┤
-│  JUGADOR  [▼ Todos los jugadores]    │
-│  [Todos] [Q1] [Q2] [Q3] [Q4]         │
-│  [Todos] [✓ Anotados] [✗ Fallados]   │
-│                                     │
-│  ┌──┐  ┌──┐  ┌──┐                   │
-│  │2/3│ │1/2│ │3/5│   ← cards resumen │
-│  │2pt│ │tri│ │tot│                   │
-│  └──┘  └──┘  └──┘                   │
-│                                     │
-│       ┌────────────────┐             │
-│       │ cancha + tiros │             │
-│       │ 🟢 2pt anot     │             │
-│       │ 🔵 3pt anot     │             │
-│       │ ✗  fallado      │             │
-│       └────────────────┘             │
-└─────────────────────────────────────┘
-```
-
-#### Modos de visualización (v1.8.2)
-
-| Modo | Qué muestra |
-|------|-------------|
-| **🎯 Puntos** | Cada tiro como punto individual (verde 2pt, azul triple, ✗ rojo fallado) |
-| **🔥 Heatmap zonas** | Cancha dividida en 7 zonas, cada zona pintada según `%` de acierto. Texto `X/Y · pct%` en cada zona |
-
-Las 7 zonas FIBA son: pintura, mid izquierda/centro/derecha, esquina izquierda 3pt, top + alas 3pt, esquina derecha 3pt.
-
-Gradiente del heatmap:
-
-| % | Color |
-|---|-------|
-| <20% | 🔴 rojo |
-| 20–29% | 🟠 naranja |
-| 30–39% | 🟡 amarillo |
-| 40–49% | 🟢 verde claro |
-| ≥50% | 🟢 verde |
-| sin tiros | gris translúcido |
-
-#### Fuente de datos (v1.8.2)
-
-| Toggle | Qué incluye |
-|--------|-------------|
-| **📅 Este partido** | Solo `m.live.shots` del partido actual |
-| **🗓 Toda la temporada** | Concatena los `shots` de todos los partidos del equipo. El picker de jugadores se amplía con cualquiera convocado en cualquier partido. Filtros por cuarto desaparecen (no aplica) |
-
-### 8.4 Exportar PNG para WhatsApp (v1.8.2)
-
-Botón verde **📤** en el header del mapa. Genera un PNG ~1000×1000 px con:
-- Cabecera: nombre del club + jugador filtrado + fecha + ratio `made/att` + `%`.
-- Cancha completa con la vista actual (puntos o heatmap).
-- Fondo navy oficial del club.
-
-**Si el dispositivo soporta `navigator.canShare({files})`** (iOS Safari, Android Chrome modernos) → abre el menú nativo de compartir con WhatsApp/etc directamente. Si no → descarga `kortline-tiros-{equipo}-{fecha}.png` y lo compartes manualmente.
-
----
+El mapa de tiros en directo durante el partido forma parte del seguimiento en vivo, que está reservado para v2.0. Mientras tanto, en v1.0.0 puedes consultar el mapa de tiros agregado de la temporada en la pantalla de Estadísticas si tienes partidos antiguos con datos.
 
 ## 9. Estadísticas
 
-### 9.1 Stats avanzadas en el live game (v1.8.0)
+### 9.1 Stats por partido (post-partido)
 
-En la tabla del live (a pantalla completa girando el móvil):
+En v1.0.0 las estadísticas se introducen al terminar el partido, desde el detalle. Por cada jugador convocado puedes anotar:
 
 | Columna | Qué es |
 |---------|--------|
-| **MIN** | Minutos jugados — calculado vía log de subs y tiempo absoluto del juego |
 | **PTS** | Puntos totales (1×p1m + 2×p2m + 3×p3m) |
 | **T2 / T3 / TL** | Anotados / Intentos |
-| **eFG%** | Tiro efectivo: `(p2m + 1.5×p3m) / intentos × 100`. Pondera triples |
 | **RO / RD** | Rebotes ofensivos / defensivos |
-| **AST / F / ROB / TAP / PER** | Asistencias / Faltas / Robos / Tapones / Pérdidas |
-| **+/-** | Diferencia de marcador mientras está en pista (verde positivo / rojo negativo) |
-| **EFF** | Eficiencia FEB: `pts + reb + ast + stl + blk − fallados − to − faltas` |
+| **AST / ROB / TAP / PER** | Asistencias / Robos / Tapones / Pérdidas |
+| **F** | Faltas (personales, técnicas, antideportivas, descalificantes) |
 
-La fila de **Totales** muestra los agregados con eFG% y EFF también calculados.
+Los totales por equipo se calculan automáticamente. Si tenías partidos antiguos con datos del seguimiento en vivo, esas estadísticas siguen visibles y editables a mano.
 
-### 9.2 Live game en horizontal · modo lectura (v1.8.0 · v1.8.24)
+> Métricas avanzadas como minutos jugados (MIN), +/- y eFG% requieren el tracking de sustituciones en tiempo real, que llegará con la v2.0. En v1.0.0 sólo se trabajan los counters básicos.
 
-Toda la operativa del partido — registrar acciones, sustituir, ajustar el marcador, gestionar tiempos muertos — se hace **siempre en vertical**. Es el flujo natural cuando estás de pie en banda con el móvil en una mano.
-
-**Si giras el móvil a horizontal estando en live game**, la pantalla cambia automáticamente a **modo lectura**: aparece la tabla de estadísticas a pantalla completa con todas las columnas (PTS, T2, T3, TL, RB, AS, ROB, TAP, PER, FAL, MIN, EFF) para que puedas mirar de un vistazo cómo va el partido. Al volver a vertical, vuelves al seguimiento operativo donde lo dejaste.
-
-> El modo horizontal está pensado solo para consultar — no para registrar. Si necesitas tocar un botón, gira a vertical primero.
-
-> Recordatorio: solo el live game tiene este modo lectura horizontal. En el resto de pantallas (Hoy, Equipos, Asistencia, Stats) verás el overlay "Gira el móvil a vertical" si rotas el dispositivo.
-
-### 9.3 Pantalla de estadísticas globales
+### 9.2 Pantalla de estadísticas globales
 
 **Equipo → 📊 Stats**:
 
@@ -810,35 +525,24 @@ Con dos botones:
 
 ## 11. Tips Pro
 
-### 11.1 Atajos del live game
-
-- **Tocar jugador en pista** = abrir modal de sustitución (no registra acciones).
-- **Tocar acción en banner** = picker "¿quién?" con los 5 del quinteto.
-- **Tras canasta** → modal asistencia automático con Saltar.
-- **Tras fallo** → modal rebote automático con "Rebote del rival" + Saltar.
-- **Pestaña de cuarto futuro** = bloqueada con 🔒 hasta que llegues.
-- **Girar móvil** = pantalla completa de stats con MIN, +/-, EFF, eFG%.
-
-### 11.2 Convocatoria rápida
+### 11.1 Convocatoria rápida
 
 - Botones **Todos** / **Ninguno** arriba a la derecha del wizard.
-- El **scroll se mantiene** al tocar jugadores (v1.7.6).
+- El **scroll se mantiene** al tocar jugadores.
 - Si activas un jugador como **titular** sin querer, vuélvelo a tocar y se desactiva.
 - **Capitán** se cambia tocando (C) en otra fila.
 
-### 11.3 Shot Chart productivo
+### 11.2 Anotar el partido sin perder tiempo
 
-- **Activa shotChart solo en partidos importantes** — añade 1 toque por tiro, no compensa en amistosos.
-- Tras finalizar el partido, ve a **📍 Mapa de tiros** → pulsa **🔥 Heatmap zonas** para resumen visual de zonas eficientes.
-- Cambia a **🗓 Toda la temporada** + filtra por jugador para análisis acumulado.
-- Comparte por WhatsApp con el botón **📤** — los jugadores reciben mapa visual de su rendimiento.
+- Si el ritmo del partido es rápido, anota solo el resultado por cuartos al terminar cada cuarto — es lo que más se consulta luego.
+- Las stats individuales (puntos por jugador, rebotes, asistencias) pueden esperar al post-partido, con la planilla en mano.
+- El sync `live → manual` sigue activo: si tienes partidos antiguos con datos del seguimiento en vivo, el resultado por cuartos ya viene rellenado y puedes corregir lo que necesites.
 
-### 11.4 Stats avanzadas en partido
+### 11.3 Backup periódico
 
-- **MIN** se acumula con tracking de subs — útil para repartir minutos equitativos.
-- **+/-** ayuda a ver impacto real del jugador en el marcador (alguien sin puntos con +/- alto suele defender bien).
-- **EFF** condensa en un número la productividad — buen indicador para partido individual.
-- **eFG%** = mejor que FG% normal porque pondera triples (1 triple cuenta como 1.5×).
+- Cada 2-3 semanas exporta el JSON desde ⚙️ Ajustes → 💾 Copia de seguridad.
+- Guarda el archivo en Drive, Dropbox o email a ti mismo. El autobackup del navegador no es un respaldo real (si limpias caché, también se va).
+- En septiembre, antes de empezar temporada nueva, exporta el JSON completo de la temporada anterior y archívalo.
 
 ---
 
@@ -846,15 +550,13 @@ Con dos botones:
 
 | Problema | Causa probable | Solución |
 |----------|----------------|----------|
-| **Foto da "Almacenamiento lleno"** | autobackup duplicador (pre-v1.8.3) | Ajustes → Copia de seguridad → 🗑 Borrar autobackup antiguo |
-| **No salta a "Continuar partido"** | partido nunca abierto | Entra al live al menos una vez |
-| **Banner del capitán sigue amarillo** | hotfix v1.7.8 no en producción | Actualiza la app / hard refresh |
-| **Stats en horizontal sin botón atrás** | desde v1.8.0 ya no hay botón | Vuelve a vertical y se cierra solo |
-| **Modal TL aparece tras CADA falta** | sin bonus el default es "Sin TL" | Pulsa "Confirmar (sin TL)" o el botón gris "Saltar sin asignar" |
-| **Carlos en card aparece como "I."** | nombre empieza con inicial pre-v1.6.15 | Edita el jugador y reabre el live game (`_shortName` lo arregla) |
-| **No puedo saltar a Q3** | Q3 está bloqueado hasta llegar | Lleva el reloj del Q2 a 0 — Q3 se desbloquea solo |
-| **Convocatoria salta al inicio al tocar jugador** | regresión pre-v1.7.6 | Actualiza la app — hace refresh in-place |
-| **Shot guardado en zona equivocada** | tocaste mal y elegiste "Mantener" pre-v1.7.4 | En v1.7.4+ el botón es "↺ Volver a tocar zona" — fuerza consistencia |
+| **Foto da "Almacenamiento lleno"** | autobackup duplicador antiguo | Ajustes → Copia de seguridad → 🗑 Borrar autobackup antiguo |
+| **El botón de la home dice "Anotar partido" en vez de "Empezar partido"** | en v1.0.0 el live game está desactivado | Es lo esperado. El seguimiento en vivo llega en v2.0; en v1.0.0 anotas resultado y stats a mano desde el detalle |
+| **Veo el botón 📍 Mapa de tiros pero está vacío** | partido sin shots registrados o partido nuevo | El mapa requiere datos del seguimiento en vivo. En v1.0.0 sólo verás mapas de partidos antiguos que tuvieran shots; los nuevos no generan datos hasta v2.0 |
+| **Carlos en stats aparece como "I."** | nombre empieza con inicial | Edita el jugador y separa el nombre: "Javier Rodríguez" en lugar de "I. Javier Rodríguez" |
+| **No me reconoce el equipo al abrir la app** | autoasignación bloqueada | Entra a Equipos y selecciona el equipo; queda fijado para siguientes sesiones |
+| **He girado el móvil y veo un overlay** | en v1.0.0 toda la app es vertical | Vuelve a vertical y todo continúa donde lo dejaste |
+| **Pierdo cambios al cerrar el modal de un jugador** | el dirty tracking pide confirmación | Pulsa "💾 Guardar y salir" en el aviso de cambios sin guardar |
 
 ---
 
@@ -862,24 +564,14 @@ Con dos botones:
 
 | Icono | Significado |
 |-------|-------------|
-| 🏀 | Partido o canasta |
+| 🏀 | Partido |
 | 🏋️ | Entrenamiento |
 | 🚑 | Lesión (jugador) |
 | 📋 | Pasar lista / convocatoria |
 | 📷 | Foto del entrenamiento |
 | 📤 | Compartir / exportar |
 | 📥 | Descargar |
-| 📍 | Mapa de tiros |
-| 🎯 | Modo Shot Chart |
-| 🔥 | Heatmap |
-| 🗓 | Temporada |
-| 📅 | Este partido |
-| ⏱ | Reloj / TM |
-| ⚡ | Acciones del banner |
-| 📦 | Rebotes |
-| 🤚 | Faltas |
-| ⛔ | Descalificado / DQ |
-| 🔒 | Bloqueado (cuarto futuro) |
+| ✏️ | Editar / anotar |
 | ⚠️ | Aviso |
 | ✓ ✗ | Anotado / Fallado |
 | ⭐ | Titular |
@@ -887,11 +579,22 @@ Con dos botones:
 | 💾 | Autoguardado |
 | 🔄 | Sincronizar / restaurar |
 | 🗑 | Borrar |
-| ↺ | Reset / volver a tocar |
-| ↔ | Sustitución |
-| ⬇️ ⬆️ | Sale / Entra |
+| ↺ | Reset |
 
 ---
 
-_Kortline · Hecho con 🧡 para CB Jaca · v1.8.5_
+## Sobre esta versión
+
+Este manual corresponde a **v1.0.0** (primera estable pública). Las próximas versiones añadirán:
+
+- **v2.0.0** — seguimiento en vivo del partido completo (scoreboard live, faltas en directo, tiempos muertos, quinteto en pista, shot chart real-time).
+- **v3.0.0** — sincronización en la nube con Firebase para colaboración entre varios coaches del mismo equipo.
+
+Para detalles y plan, ver [`ROADMAP.md`](ROADMAP.md).
+
+---
+
+_Kortline · Hecho con 🧡 para CB Jaca · v1.0.0_
 _Desarrollado por Mario Nadal Ara_
+                                                                                                                                                                                                                                                                                                                                                                                 
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           

@@ -1918,6 +1918,19 @@ const JUST_REASONS=[{id:"sick",label:"Enfermo/a",icon:"🤒"},{id:"injury",label
 const DEFAULT_CFG={riskThreshold:75,features:{teamScore:false,playerScore:false,photos:false,exercises:false,quickMode:false,chainPrompt:true}};
 
 /* ═══════════════════════════════════════
+   FEATURE FLAGS (v1.0.0)
+═══════════════════════════════════════ */
+// v1.0.0 estable: el LIVE GAME está DESACTIVADO.
+// El código del live game permanece en este HTML por dos razones:
+//   1) Compatibilidad: los partidos guardados previamente con `m.live` siguen
+//      siendo legibles, y `matchDetail` ya sincroniza automáticamente
+//      `m.live.qScores` al marcador manual por cuartos.
+//   2) Continuidad: en la rama `v2-live` este flag se reactivará a `true`
+//      para reincorporar el seguimiento en vivo cuando esté pulido.
+// Para más contexto, ver ROADMAP.md en la raíz del repo.
+const FEATURE_LIVE_GAME = false;
+
+/* ═══════════════════════════════════════
    STATE
 ═══════════════════════════════════════ */
 let S={screen:"hoy",teamId:null,date:td(),teams:[],players:{},sessions:{},matches:{},events:{},sf:"all",histMonth:null,statsMonth:null,clubLogo:null,clubName:"Kortline",clubAbrev:"",clubLema:"",cfg:{...DEFAULT_CFG},statsView:"table",matchId:null,eventId:null,navStack:[]};
@@ -2178,7 +2191,7 @@ function _clearAutoBackup(){
 
 function exportBackup(){
   const filename=`kortline-backup-${td()}.json`;
-  const data={version:"1.8.24",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
+  const data={version:"1.0.0",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
   const json=JSON.stringify(data,null,2);
   const blob=new Blob([json],{type:"application/json"});
   // Descarga directa
@@ -2808,7 +2821,13 @@ function render(){
   else if(S.screen==="eventos")r.innerHTML=eventos();
   else if(S.screen==="matchList")r.innerHTML=matchList();
   else if(S.screen==="matchDetail")r.innerHTML=matchDetail();
-  else if(S.screen==="liveGame")r.innerHTML=liveGame();
+  else if(S.screen==="liveGame"){
+    // v1.0.0: si el live game está desactivado por feature flag, redirigir
+    // automáticamente al detalle del partido. Cubre el caso de que alguien
+    // navegue a `liveGame` desde código antiguo o desde un partido viejo.
+    if(!FEATURE_LIVE_GAME){S.screen="matchDetail";r.innerHTML=matchDetail();}
+    else r.innerHTML=liveGame();
+  }
   else if(S.screen==="shotMap")r.innerHTML=shotMap();
   else if(S.screen==="matchSummary")r.innerHTML=matchSummaryScreen();
   // v1.8.24: marcamos el body con la clase 'in-live' solo cuando estamos en
@@ -3032,9 +3051,13 @@ function hoy(){
           </div>
         </div>`:""}
         <div style="display:flex;gap:8px">
-          <button onclick="navTo('liveGame',{teamId:'${t.id}',matchId:'${m.id}'})" style="flex:1;padding:11px;border-radius:9px;border:none;font-weight:800;font-size:14px;cursor:pointer;background:${started?"linear-gradient(135deg,#ef4444,#b91c1c)":"linear-gradient(135deg,var(--orange),var(--orange2))"};color:white">${started?"🔴 Continuar partido":"▶ Empezar partido"}</button>
+          ${FEATURE_LIVE_GAME?
+            `<button onclick="navTo('liveGame',{teamId:'${t.id}',matchId:'${m.id}'})" style="flex:1;padding:11px;border-radius:9px;border:none;font-weight:800;font-size:14px;cursor:pointer;background:${started?"linear-gradient(135deg,#ef4444,#b91c1c)":"linear-gradient(135deg,var(--orange),var(--orange2))"};color:white">${started?"🔴 Continuar partido":"▶ Empezar partido"}</button>`
+            :
+            `<button onclick="S.teamId='${t.id}';navTo('matchDetail',{matchId:'${m.id}'})" style="flex:1;padding:11px;border-radius:9px;border:none;font-weight:800;font-size:14px;cursor:pointer;background:linear-gradient(135deg,var(--orange),var(--orange2));color:white">✏️ Anotar partido</button>`
+          }
           <button onclick="S.teamId='${t.id}';navTo('matchDetail',{matchId:'${m.id}'})" style="width:46px;height:46px;border-radius:9px;background:var(--s2);border:1px solid var(--border);cursor:pointer;font-size:18px">📋</button>
-          ${inProgress?`<button onclick="_finishAndShowSummary('${t.id}','${m.id}')" style="width:46px;height:46px;border-radius:9px;background:rgba(107,114,128,.15);border:1px solid #6b728055;cursor:pointer;font-size:18px" title="Finalizar y ver resumen">🏁</button>`:""}
+          ${FEATURE_LIVE_GAME&&inProgress?`<button onclick="_finishAndShowSummary('${t.id}','${m.id}')" style="width:46px;height:46px;border-radius:9px;background:rgba(107,114,128,.15);border:1px solid #6b728055;cursor:pointer;font-size:18px" title="Finalizar y ver resumen">🏁</button>`:""}
         </div>
       </div>
     </div>`;
@@ -4100,7 +4123,7 @@ function openClubSettings(){
       <div class="stg-sec-title">ℹ️ Acerca de</div>
       <div style="text-align:center;padding:18px 0 6px">
         <img src="${_FULL_SVG_URL}" style="height:36px;max-width:100%;opacity:0.9;margin-bottom:10px"/>
-        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.8.6 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
+        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.0.0 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
       </div>
     </div>
     <button class="btn-p" onclick="saveClubSettings()">Guardar configuración</button>
@@ -5232,7 +5255,7 @@ function matchDetail(){
   <div class="content">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
       ${resultBadge}
-      <button onclick="navTo('liveGame')" style="display:inline-flex;align-items:center;gap:5px;padding:5px 13px;border-radius:8px;border:none;background:linear-gradient(135deg,#dc2626,#b91c1c);color:white;font-weight:800;font-size:13px;cursor:pointer">🔴 ${hasLive?"Continuar en vivo":"Seguimiento en vivo"}</button>
+      ${FEATURE_LIVE_GAME?`<button onclick="navTo('liveGame')" style="display:inline-flex;align-items:center;gap:5px;padding:5px 13px;border-radius:8px;border:none;background:linear-gradient(135deg,#dc2626,#b91c1c);color:white;font-weight:800;font-size:13px;cursor:pointer">🔴 ${hasLive?"Continuar en vivo":"Seguimiento en vivo"}</button>`:""}
     </div>
     ${scoreboardHtml}
     <div style="margin-bottom:8px">
@@ -5269,7 +5292,7 @@ function matchDetail(){
       <button onclick="openConvSetup()" style="background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px;font-weight:700">✏️ Editar</button>
     </div>`:""}
 
-        <button class="btn-p" style="margin-top:16px" onclick="S.screen='liveGame';render()">🔴 Iniciar en Vivo</button>
+        ${FEATURE_LIVE_GAME?`<button class="btn-p" style="margin-top:16px" onclick="S.screen='liveGame';render()">🔴 Iniciar en Vivo</button>`:""}
     <button class="btn-d" style="margin-top:8px" onclick="deleteMatchConfirm(S.matchId)">🗑 Eliminar partido</button>
   </div>
   ${navBar()}`;
