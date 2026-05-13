@@ -36,7 +36,9 @@ Para el manual de usuario, ver [`MANUAL_USUARIO_KORTLINE.md`](MANUAL_USUARIO_KOR
 
 | Versión | Fecha | Resumen |
 |---|---|---|
-| **v1.0.0** | 2026-05-13 | Primera estable pública. Gestión + resultados manuales. Live game desactivado vía feature flag. |
+| **v1.0.2** | 2026-05-13 | Patch: ocultar los 4 toggles de live en "Crear partido" y actualizar el texto del overlay de orientación. |
+| v1.0.1 | 2026-05-13 | Patch: ocultar la sección "Modo rápido (live game)" del panel de Ajustes. |
+| v1.0.0 | 2026-05-13 | Primera estable pública. Gestión + resultados manuales. Live game desactivado vía feature flag. |
 
 (Las versiones v1.8.x previas formaron parte del desarrollo interno y se conservan en `CHANGELOG.md`.)
 
