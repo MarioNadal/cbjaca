@@ -5245,8 +5245,8 @@ function updateQ(idx,val){
   // Actualizar badge resultado inline
   const badge=document.getElementById("match-result-badge");
   if(badge&&sc){
-    const r=sc.h>sc.a?"W":sc.h<sc.a?"L":sc.h===sc.a&&sc.h>0?"D":"P";
     const our=m.location==="away"?sc.a:sc.h;const their=m.location==="away"?sc.h:sc.a;
+    const r=our>their?"W":our<their?"L":our===their&&our>0?"D":"P";
     badge.className="result-pill "+r;
     badge.style.cssText=r!=="P"?"font-size:15px;padding:4px 14px":"font-size:13px;padding:3px 10px";
     badge.textContent=r==="W"?`🏆 Victoria ${our}–${their}`:r==="L"?`❌ Derrota ${our}–${their}`:r==="D"?`🤝 Empate ${our}–${their}`:"⏳ Pendiente";
